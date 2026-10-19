@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>弱点克服ノート</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class', // classベースのダークモードを有効化
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+      animation: fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    @keyframes modalFadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-modal {
+      animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* 隠し要素 */
+    .hidden-force {
+      display: none !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200 min-h-screen flex flex-col pb-20">
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Context Menu -->
+  <div id="contextMenu" class="fixed z-[90] hidden-force pointer-events-auto flex-col gap-2">
+    <button id="contextMoveBtn" class="bg-gray-900 dark:bg-gray-800 hover:bg-blue-600 dark:hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-xl transition-all border border-gray-700 ring-4 ring-black/10">
+      <i data-lucide="move-right" class="w-4 h-4"></i> 移動する
+    </button>
+    <button id="contextDeleteBtn" class="bg-gray-900 dark:bg-gray-800 hover:bg-red-600 dark:hover:bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-xl transition-all border border-gray-700 ring-4 ring-black/10">
+      <i data-lucide="trash-2" class="w-4 h-4"></i> 削除する
+    </button>
+  </div>
+
+  <!-- Hidden File Input for Loading -->
+  <input type="file" id="fileInput" accept=".json" class="hidden">
+
+  <header class="p-3 sticky top-0 z-30 flex items-center justify-between border-b bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm transition-colors">
+    <!-- Left: Title & Settings -->
+    <div class="flex-1 flex items-center gap-2">
+      <h1 class="text-lg font-bold text-indigo-600 dark:text-indigo-400 hidden sm:block">弱点克服ノート</h1>
+      <h1 class="text-lg font-bold text-indigo-600 dark:text-indigo-400 sm:hidden">弱点ノート</h1>
+      <button onclick="openModal('settingsModal')" class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="設定">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Center: Undo/Redo -->
+    <div class="flex items-center gap-2 justify-center flex-1">
+      <button id="undoBtn" onclick="undo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="戻る (Ctrl+Z)">
+        <i data-lucide="undo-2" class="w-5 h-5"></i>
+      </button>
+      <button id="redoBtn" onclick="redo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="進む (Ctrl+Y)">
+        <i data-lucide="redo-2" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Right: Actions -->
+    <div class="flex items-center gap-1 sm:gap-2 justify-end flex-1">
+      <button onclick="openModal('saveModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="ファイルに保存">
+        <i data-lucide="save" class="w-5 h-5"></i>
+      </button>
+      <button onclick="document.getElementById('fileInput').click()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="ファイルから読み込み">
+        <i data-lucide="upload" class="w-5 h-5"></i>
+      </button>
+      <div class="w-px h-6 mx-1 bg-gray-200 dark:bg-gray-700"></div>
+      
+      <button onclick="openModal('memoModal')" class="p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-colors" title="メモを記録">
+        <i data-lucide="pen-square" class="w-6 h-6"></i>
+      </button>
+      <button onclick="openModal('folderModal')" class="p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-colors" title="新規フォルダ">
+        <i data-lucide="plus" class="w-7 h-7"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto p-4 w-full">
+    <!-- Breadcrumbs -->
+    <div id="breadcrumbs" class="flex items-center flex-wrap gap-1 mb-6 text-sm p-3 rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-700 transition-colors">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Folders Section -->
+    <section class="mb-8">
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1 flex items-center gap-2">
+        <i data-lucide="folder" class="w-4 h-4"></i> フォルダ
+      </h2>
+      <div id="foldersContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+        <!-- Injected by JS -->
+      </div>
+    </section>
+
+    <!-- Memos Section -->
+    <section>
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1 flex items-center gap-2">
+        <i data-lucide="file-text" class="w-4 h-4"></i> メモ書き (間違えた問題)
+      </h2>
+      <div id="memosContainer" class="flex flex-wrap gap-3">
+        <!-- Injected by JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Memo Modal -->
+  <div id="memoModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">記録を追加</h3>
+        <button onclick="closeModal('memoModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4">
+        <textarea id="memoInput" placeholder="間違えた問題の内容を入力..." rows="5" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
+        <div class="mt-6 flex gap-3">
+          <button onclick="closeModal('memoModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="saveMemo()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">完了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder Modal -->
+  <div id="folderModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">新規フォルダ</h3>
+        <button onclick="closeModal('folderModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4">
+        <input type="text" id="folderInput" placeholder="フォルダ名を入力..." class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+        <div class="mt-6 flex gap-3">
+          <button onclick="closeModal('folderModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="saveFolder()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">追加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move Folder Modal -->
+  <div id="moveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">フォルダを移動</h3>
+        <button onclick="closeModal('moveModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ml-1">移動先フォルダ</label>
+        <select id="moveTargetSelect" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+          <!-- Injected by JS -->
+        </select>
+        <div class="mt-6 flex gap-3">
+          <button onclick="closeModal('moveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="executeFolderMove()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">移動する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div id="saveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">ファイルに保存</h3>
+        <button onclick="closeModal('saveModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ml-1">ファイル名</label>
+        <div class="flex items-center gap-2">
+          <input type="text" id="saveFileNameInput" value="mistake_notes" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+          <span class="text-gray-500 dark:text-gray-400 font-medium">.json</span>
+        </div>
+        <div class="mt-6 flex gap-3">
+          <button onclick="closeModal('saveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="executeSaveToFile()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">保存する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700 flex flex-col max-h-[90vh]">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
+        <h3 class="font-bold flex items-center gap-2 text-gray-800 dark:text-gray-100"><i data-lucide="settings" class="w-4 h-4"></i> 設定</h3>
+        <button onclick="closeModal('settingsModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      
+      <div class="p-5 overflow-y-auto grow">
+        <!-- Theme -->
+        <div class="mb-6">
+          <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">テーマ</h4>
+          <div class="flex gap-3">
+            <button onclick="setTheme('light')" id="theme-light-btn" class="flex-1 py-2 rounded-lg border font-medium">ライト</button>
+            <button onclick="setTheme('dark')" id="theme-dark-btn" class="flex-1 py-2 rounded-lg border font-medium">ダーク</button>
+          </div>
+        </div>
+
+        <!-- Font Size -->
+        <div class="mb-6">
+          <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">文字の大きさ</h4>
+          <div class="flex gap-2">
+            <button onclick="setFontSize('small')" id="font-small-btn" class="flex-1 py-2 rounded-lg border font-medium">小</button>
+            <button onclick="setFontSize('medium')" id="font-medium-btn" class="flex-1 py-2 rounded-lg border font-medium">中</button>
+            <button onclick="setFontSize('large')" id="font-large-btn" class="flex-1 py-2 rounded-lg border font-medium">大</button>
+          </div>
+        </div>
+
+        <!-- Color Rules -->
+        <div>
+          <h4 class="text-sm font-bold mb-3 flex items-center justify-between text-gray-500 dark:text-gray-400">
+            回数と色のルール
+            <button id="addColorRuleBtn" onclick="addColorRule()" class="text-indigo-500 hover:text-indigo-600 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1 font-normal"><i data-lucide="plus-circle" class="w-4 h-4"></i> 追加</button>
+          </h4>
+          <div id="colorRulesContainer" class="space-y-3">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="p-4 border-t border-gray-100 dark:border-gray-700 shrink-0">
+        <button onclick="closeModal('settingsModal')" class="w-full py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Folder Confirm Modal -->
+  <div id="deleteConfirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-[100]">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-red-100 dark:border-red-900/30">
+      <div class="flex flex-col items-center justify-center p-6 border-b bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400">
+        <i data-lucide="alert-triangle" class="w-12 h-12 mb-2"></i>
+        <h3 class="font-bold text-lg">本当に削除しますか？</h3>
+      </div>
+      <div class="p-4">
+        <p class="text-sm text-center mb-6 text-gray-600 dark:text-gray-300">
+          このフォルダを削除すると、中のメモやサブフォルダも失われる可能性があります。
+        </p>
+        <div class="flex gap-3">
+          <button onclick="closeModal('deleteConfirmModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="executeFolderDelete()" class="flex-1 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 font-medium transition-colors shadow-lg shadow-red-500/30">削除する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Utilities ---
+    const generateId = () => Math.random().toString(36).substring(2, 9);
+    const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag]));
+
+    const COLOR_OPTIONS = [
+      { value: 'red', label: '赤色' },
+      { value: 'pink', label: 'ピンク色' },
+      { value: 'orange', label: 'オレンジ色' },
+      { value: 'yellow', label: '黄色' },
+      { value: 'green', label: '緑色' },
+      { value: 'teal', label: '青緑色' },
+      { value: 'blue', label: '青色' },
+      { value: 'indigo', label: '藍色' },
+      { value: 'purple', label: '紫色' },
+      { value: 'gray', label: '灰色' },
+    ];
+
+    // --- State Management ---
+    let appState = {
+      folders: [{ id: 'root', name: 'すべてのノート', parentId: null }],
+      memos: []
+    };
+    
+    let defaultSettings = {
+      theme: 'light',
+      fontSize: 'medium',
+      colorRules: [
+        { id: 'r1', count: 3, color: 'red' },
+        { id: 'r2', count: 2, color: 'orange' }
+      ]
+    };
+    let settings = { ...defaultSettings };
+
+    let currentFolderId = 'root';
+    let pastHistory = [];
+    let futureHistory = [];
+
+    // Long press logic
+    let pointerTimer = null;
+    let contextMenuData = null; // { type, id, x, y }
+    let folderToDelete = null; // Store id before confirmation
+    let folderToMove = null; // Store id for moving
+
+    // --- Initialize ---
+    function init() {
+      const savedData = localStorage.getItem('mistake_app_data');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          if (parsed.folders && parsed.memos) appState = parsed;
+        } catch(e) {}
+      }
+
+      const savedSettings = localStorage.getItem('mistake_app_settings');
+      if (savedSettings) {
+        try {
+          settings = { ...defaultSettings, ...JSON.parse(savedSettings) };
+        } catch(e) {}
+      }
+
+      applyTheme();
+      renderAll();
+      setupEventListeners();
+      lucide.createIcons();
+    }
+
+    function saveToStorage() {
+      localStorage.setItem('mistake_app_data', JSON.stringify(appState));
+    }
+    
+    function saveSettings() {
+      localStorage.setItem('mistake_app_settings', JSON.stringify(settings));
+      applyTheme();
+      renderAll();
+    }
+
+    // --- History (Undo/Redo) ---
+    function updateState(newState) {
+      pastHistory.push(JSON.parse(JSON.stringify(appState)));
+      appState = JSON.parse(JSON.stringify(newState));
+      futureHistory = [];
+      saveToStorage();
+      renderAll();
+    }
+
+    function undo() {
+      if (pastHistory.length === 0) return;
+      const previous = pastHistory.pop();
+      futureHistory.push(JSON.parse(JSON.stringify(appState)));
+      appState = previous;
+      saveToStorage();
+      renderAll();
+    }
+
+    function redo() {
+      if (futureHistory.length === 0) return;
+      const next = futureHistory.pop();
+      pastHistory.push(JSON.parse(JSON.stringify(appState)));
+      appState = next;
+      saveToStorage();
+      renderAll();
+    }
+
+    // --- Rendering ---
+    function renderAll() {
+      renderBreadcrumbs();
+      renderFolders();
+      renderMemos();
+      updateButtons();
+      renderSettingsModal();
+      lucide.createIcons();
+    }
+
+    function updateButtons() {
+      document.getElementById('undoBtn').disabled = pastHistory.length === 0;
+      document.getElementById('redoBtn').disabled = futureHistory.length === 0;
+    }
+
+    function applyTheme() {
+      if (settings.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function renderBreadcrumbs() {
+      const container = document.getElementById('breadcrumbs');
+      const crumbs = [];
+      let currId = currentFolderId;
+      
+      while (currId) {
+        const folder = appState.folders.find(f => f.id === currId);
+        if (folder) {
+          crumbs.unshift(folder);
+          currId = folder.parentId;
+        } else {
+          break;
+        }
+      }
+
+      container.innerHTML = crumbs.map((crumb, index) => {
+        const isLast = index === crumbs.length - 1;
+        const classes = isLast 
+          ? "font-bold text-gray-900 dark:text-white" 
+          : "hover:text-indigo-500 cursor-pointer transition-colors";
+        
+        return `<span class="py-1 ${classes}" ${!isLast ? `onclick="changeFolder('${crumb.id}')"` : ''}>
+                  ${escapeHTML(crumb.name)}
+                </span>
+                ${!isLast ? `<i data-lucide="chevron-right" class="w-4 h-4 mx-1"></i>` : ''}`;
+      }).join('');
+    }
+
+    function renderFolders() {
+      const container = document.getElementById('foldersContainer');
+      const childFolders = appState.folders.filter(f => f.parentId === currentFolderId);
+      
+      if (childFolders.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm ml-2">フォルダはありません</p>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      childFolders.forEach(folder => {
+        const div = document.createElement('div');
+        div.className = "bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer flex items-center justify-between group transition-all select-none";
+        
+        // Context menu events on the div
+        div.addEventListener('pointerdown', (e) => onPointerDown(e, 'folder', folder.id));
+        div.addEventListener('pointerup', onPointerUpOrMove);
+        div.addEventListener('pointermove', onPointerUpOrMove);
+        div.addEventListener('pointercancel', onPointerUpOrMove);
+        div.addEventListener('contextmenu', e => e.preventDefault());
+        
+        // Normal click navigation
+        div.addEventListener('click', (e) => {
+          if (!contextMenuData) changeFolder(folder.id);
+        });
+
+        div.innerHTML = `
+          <div class="flex items-center gap-3 w-full pointer-events-none">
+            <div class="text-indigo-500 dark:text-indigo-400">
+              <i data-lucide="folder" class="w-6 h-6"></i>
+            </div>
+            <span class="font-medium text-gray-700 dark:text-gray-200 truncate flex-1">${escapeHTML(folder.name)}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Colors mapper based on logic
+    function getColorClasses(count) {
+      const sortedRules = [...settings.colorRules].sort((a, b) => b.count - a.count);
+      const matchedRule = sortedRules.find(rule => count >= rule.count);
+      const base = matchedRule ? matchedRule.color : 'default';
+      const isDark = settings.theme === 'dark';
+
+      const map = {
+        red: {
+          light: 'bg-red-50 border-red-200 text-red-800', badgeLight: 'bg-red-500 text-white',
+          dark: 'bg-red-900/20 border-red-800/50 text-red-200', badgeDark: 'bg-red-900 text-red-200 border border-red-700'
+        },
+        pink: {
+          light: 'bg-pink-50 border-pink-200 text-pink-800', badgeLight: 'bg-pink-500 text-white',
+          dark: 'bg-pink-900/20 border-pink-800/50 text-pink-200', badgeDark: 'bg-pink-900 text-pink-200 border border-pink-700'
+        },
+        orange: {
+          light: 'bg-orange-50 border-orange-200 text-orange-800', badgeLight: 'bg-orange-500 text-white',
+          dark: 'bg-orange-900/20 border-orange-800/50 text-orange-200', badgeDark: 'bg-orange-900 text-orange-200 border border-orange-700'
+        },
+        yellow: {
+          light: 'bg-yellow-50 border-yellow-200 text-yellow-900', badgeLight: 'bg-yellow-500 text-gray-900',
+          dark: 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200', badgeDark: 'bg-yellow-900 text-yellow-200 border border-yellow-700'
+        },
+        green: {
+          light: 'bg-green-50 border-green-200 text-green-800', badgeLight: 'bg-green-500 text-white',
+          dark: 'bg-green-900/20 border-green-800/50 text-green-200', badgeDark: 'bg-green-900 text-green-200 border border-green-700'
+        },
+        teal: {
+          light: 'bg-teal-50 border-teal-200 text-teal-800', badgeLight: 'bg-teal-500 text-white',
+          dark: 'bg-teal-900/20 border-teal-800/50 text-teal-200', badgeDark: 'bg-teal-900 text-teal-200 border border-teal-700'
+        },
+        blue: {
+          light: 'bg-blue-50 border-blue-200 text-blue-800', badgeLight: 'bg-blue-500 text-white',
+          dark: 'bg-blue-900/20 border-blue-800/50 text-blue-200', badgeDark: 'bg-blue-900 text-blue-200 border border-blue-700'
+        },
+        indigo: {
+          light: 'bg-indigo-50 border-indigo-200 text-indigo-800', badgeLight: 'bg-indigo-500 text-white',
+          dark: 'bg-indigo-900/20 border-indigo-800/50 text-indigo-200', badgeDark: 'bg-indigo-900 text-indigo-200 border border-indigo-700'
+        },
+        purple: {
+          light: 'bg-purple-50 border-purple-200 text-purple-800', badgeLight: 'bg-purple-500 text-white',
+          dark: 'bg-purple-900/20 border-purple-800/50 text-purple-200', badgeDark: 'bg-purple-900 text-purple-200 border border-purple-700'
+        },
+        gray: {
+          light: 'bg-gray-50 border-gray-300 text-gray-800', badgeLight: 'bg-gray-500 text-white',
+          dark: 'bg-gray-800/50 border-gray-600 text-gray-300', badgeDark: 'bg-gray-700 text-gray-300 border border-gray-600'
+        },
+        default: {
+          light: 'bg-white border-gray-100 text-gray-800', badgeLight: 'bg-gray-100 text-gray-600',
+          dark: 'bg-gray-800 border-gray-700 text-gray-200', badgeDark: 'bg-gray-700 text-gray-300'
+        }
+      };
+
+      const c = map[base] || map.default;
+      return {
+        box: isDark ? c.dark : c.light,
+        badge: isDark ? c.badgeDark : c.badgeLight
+      };
+    }
+
+    function renderMemos() {
+      const container = document.getElementById('memosContainer');
+      const memos = appState.memos
+        .filter(m => m.folderId === currentFolderId)
+        .sort((a, b) => b.count - a.count);
+
+      if (memos.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm ml-2">メモはありません</p>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      memos.forEach(memo => {
+        const colors = getColorClasses(memo.count);
+        const div = document.createElement('div');
+        // フレキシブルに並ぶように (min-w-[200px] で短ければ横並びに)
+        div.className = `relative flex-auto min-w-[200px] max-w-full p-4 rounded-xl border transition-all flex items-start justify-between gap-4 group select-none cursor-pointer shadow-sm ${colors.box}`;
+        
+        div.addEventListener('pointerdown', (e) => onPointerDown(e, 'memo', memo.id));
+        div.addEventListener('pointerup', onPointerUpOrMove);
+        div.addEventListener('pointermove', onPointerUpOrMove);
+        div.addEventListener('pointercancel', onPointerUpOrMove);
+        div.addEventListener('contextmenu', e => e.preventDefault());
+        
+        div.addEventListener('click', (e) => {
+          if (!contextMenuData) {
+            copyToClipboard(memo.text);
+          }
+        });
+
+        // text content carefully escaped
+        const fontSizeClass = settings.fontSize === 'small' ? 'text-xs md:text-sm' : 
+                              settings.fontSize === 'large' ? 'text-base md:text-xl' : 
+                              'text-sm md:text-base';
+
+        div.innerHTML = `
+          <p class="whitespace-pre-wrap break-words flex-1 leading-relaxed pointer-events-none ${fontSizeClass}">
+            ${escapeHTML(memo.text)}
+          </p>
+          <div class="flex flex-col items-end gap-2 flex-shrink-0 pointer-events-none">
+            <div class="flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm ${colors.badge}">
+              × ${memo.count}
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function copyToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+      document.body.prepend(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('メモをコピーしました');
+      } catch (error) {
+        showToast('コピーに失敗しました');
+      } finally {
+        textArea.remove();
+      }
+    }
+
+    function changeFolder(id) {
+      currentFolderId = id;
+      renderAll();
+    }
+
+    function renderSettingsModal() {
+      // Buttons styling
+      const isDark = settings.theme === 'dark';
+      document.getElementById('theme-light-btn').className = `flex-1 py-2 rounded-lg border font-medium ${!isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+      document.getElementById('theme-dark-btn').className = `flex-1 py-2 rounded-lg border font-medium ${isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+
+      ['small', 'medium', 'large'].forEach(size => {
+        const btn = document.getElementById(`font-${size}-btn`);
+        const active = settings.fontSize === size;
+        btn.className = `flex-1 py-2 rounded-lg border font-medium ${active ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+      });
+
+      // Render Rules
+      const addBtn = document.getElementById('addColorRuleBtn');
+      if (settings.colorRules.length >= 5) {
+        addBtn.disabled = true;
+      } else {
+        addBtn.disabled = false;
+      }
+
+      const container = document.getElementById('colorRulesContainer');
+      const sortedRules = [...settings.colorRules].sort((a,b) => b.count - a.count);
+      
+      if (sortedRules.length === 0) {
+        container.innerHTML = `<p class="text-sm text-center py-2 text-gray-400">ルールはありません。</p>`;
+      } else {
+        container.innerHTML = sortedRules.map(rule => `
+          <div class="flex items-center gap-3 p-3 rounded-lg border bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
+            <input type="number" min="1" value="${rule.count}" 
+              onchange="updateColorRule('${rule.id}', 'count', this.value)"
+              class="w-16 px-2 py-1.5 rounded border focus:ring-1 focus:ring-indigo-500 text-center bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+            <span class="text-gray-600 dark:text-gray-400">回以上で</span>
+            <select onchange="updateColorRule('${rule.id}', 'color', this.value)"
+              class="flex-1 px-2 py-1.5 rounded border focus:ring-1 focus:ring-indigo-500 bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+              ${COLOR_OPTIONS.map(opt => `<option value="${opt.value}" ${rule.color === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
+            </select>
+            <button onclick="deleteColorRule('${rule.id}')" class="text-gray-400 hover:text-red-500 p-1">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+      lucide.createIcons();
+    }
+
+    function addColorRule() {
+      if (settings.colorRules.length >= 5) {
+        showToast('色のルールは最大5つまでです');
+        return;
+      }
+      settings.colorRules.push({ id: generateId(), count: 1, color: 'blue' });
+      saveSettings();
+    }
+    
+    function updateColorRule(id, key, value) {
+      const rule = settings.colorRules.find(r => r.id === id);
+      if (rule) {
+        rule[key] = key === 'count' ? Number(value) : value;
+        saveSettings();
+      }
+    }
+
+    function deleteColorRule(id) {
+      settings.colorRules = settings.colorRules.filter(r => r.id !== id);
+      saveSettings();
+    }
+
+    function setTheme(theme) {
+      settings.theme = theme;
+      saveSettings();
+    }
+
+    function setFontSize(size) {
+      settings.fontSize = size;
+      saveSettings();
+    }
+
+
+    // --- Data Actions ---
+    function saveFolder() {
+      const input = document.getElementById('folderInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const newState = { ...appState, folders: [...appState.folders] };
+      newState.folders.push({
+        id: generateId(),
+        name,
+        parentId: currentFolderId
+      });
+
+      updateState(newState);
+      input.value = '';
+      closeModal('folderModal');
+    }
+
+    function saveMemo() {
+      const input = document.getElementById('memoInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const newState = { ...appState, memos: [...appState.memos] };
+      const existingIndex = newState.memos.findIndex(m => m.folderId === currentFolderId && m.text === text);
+
+      if (existingIndex >= 0) {
+        newState.memos[existingIndex] = {
+          ...newState.memos[existingIndex],
+          count: newState.memos[existingIndex].count + 1
+        };
+      } else {
+        newState.memos.push({
+          id: generateId(),
+          text,
+          count: 1,
+          folderId: currentFolderId
+        });
+      }
+
+      updateState(newState);
+      input.value = '';
+      closeModal('memoModal');
+    }
+
+    function requestDelete() {
+      if (!contextMenuData) return;
+      hideContextMenu();
+
+      if (contextMenuData.type === 'folder') {
+        folderToDelete = contextMenuData.id;
+        openModal('deleteConfirmModal');
+      } else {
+        const newState = {
+          ...appState,
+          memos: appState.memos.filter(m => m.id !== contextMenuData.id)
+        };
+        updateState(newState);
+        showToast('メモを削除しました');
+      }
+    }
+
+    function executeFolderDelete() {
+      if (!folderToDelete) return;
+      const newState = {
+        ...appState,
+        folders: appState.folders.filter(f => f.id !== folderToDelete)
+      };
+      // Recursive delete isn't strictly necessary if parent references are broken, 
+      // but good practice. For simplicity, just removing the folder hides its children.
+      updateState(newState);
+      folderToDelete = null;
+      closeModal('deleteConfirmModal');
+      showToast('フォルダを削除しました');
+    }
+
+    function getDescendantFolderIds(folderId) {
+      const descendants = [];
+      const getChildren = (id) => {
+        const children = appState.folders.filter(f => f.parentId === id);
+        children.forEach(c => {
+          descendants.push(c.id);
+          getChildren(c.id);
+        });
+      };
+      getChildren(folderId);
+      return descendants;
+    }
+
+    function getMovableFolders(folderId) {
+      if (!folderId) return [];
+      const descendants = getDescendantFolderIds(folderId);
+      const invalidIds = new Set([folderId, ...descendants]);
+      return appState.folders.filter(f => !invalidIds.has(f.id));
+    }
+
+    function executeFolderMove() {
+      if (!folderToMove) return;
+      const targetId = document.getElementById('moveTargetSelect').value;
+      const newState = {
+        ...appState,
+        folders: appState.folders.map(f => {
+          if (f.id === folderToMove) {
+            return { ...f, parentId: targetId };
+          }
+          return f;
+        })
+      };
+      updateState(newState);
+      folderToMove = null;
+      closeModal('moveModal');
+      showToast('フォルダを移動しました');
+    }
+
+    // --- File IO ---
+    async function executeSaveToFile() {
+      const nameInput = document.getElementById('saveFileNameInput').value.trim();
+      const fileName = nameInput ? `${nameInput}.json` : 'mistake_notes.json';
+      const jsonString = JSON.stringify(appState, null, 2);
+      
+      try {
+        if (window.showSaveFilePicker) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(jsonString);
+          await writable.close();
+          showToast("指定された場所に保存しました");
+        } else {
+          // Fallback
+          const blob = new Blob([jsonString], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast("ダウンロードフォルダに保存しました");
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') showToast("保存に失敗しました");
+      }
+      closeModal('saveModal');
+    }
+
+    // 古いsaveToFile関数を置き換えのために空にしておくか削除。
+    // イベントリスナーは上でexecuteSaveToFileに変更済みなのでこちらは不要ですが互換性のため残すなら:
+    function saveToFile() { openModal('saveModal'); }
+
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (parsed.folders && parsed.memos) {
+            updateState(parsed);
+            currentFolderId = 'root';
+            renderAll();
+            showToast("データを読み込みました");
+          }
+        } catch(err) {
+          showToast("読み込みに失敗しました");
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // --- UI Helpers & Events ---
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden-force');
+      el.classList.add('flex');
+      // focus input if exists
+      const input = el.querySelector('input, textarea');
+      if(input) setTimeout(() => input.focus(), 100);
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      el.classList.add('hidden-force');
+      el.classList.remove('flex');
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = "bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium animate-fade-in-up border border-gray-700";
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Long press logic
+    function onPointerDown(e, type, id) {
+      if (e.button !== 0 && e.button !== undefined) return;
+      hideContextMenu();
+      
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
+
+      pointerTimer = setTimeout(() => {
+        contextMenuData = { type, id, x, y };
+        if (navigator.vibrate) navigator.vibrate(50);
+        showContextMenu();
+      }, 600);
+    }
+
+    function onPointerUpOrMove() {
+      if (pointerTimer) {
+        clearTimeout(pointerTimer);
+        pointerTimer = null;
+      }
+    }
+
+    function showContextMenu() {
+      if (!contextMenuData) return;
+      const menu = document.getElementById('contextMenu');
+      const moveBtn = document.getElementById('contextMoveBtn');
+      
+      if (contextMenuData.type === 'folder') {
+        moveBtn.classList.remove('hidden-force');
+        menu.classList.add('flex');
+      } else {
+        moveBtn.classList.add('hidden-force');
+        menu.classList.add('flex');
+      }
+
+      menu.classList.remove('hidden-force');
+      
+      // Right-top of tap coordinates
+      let left = contextMenuData.x + 10;
+      let top = Math.max(contextMenuData.y - 50, 10);
+      
+      // boundary check
+      if (left + 120 > window.innerWidth) left = window.innerWidth - 130;
+      
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    }
+
+    function hideContextMenu() {
+      const menu = document.getElementById('contextMenu');
+      menu.classList.add('hidden-force');
+      // small delay to prevent triggering underlying elements click immediately
+      setTimeout(() => { contextMenuData = null; }, 50);
+    }
+
+    function setupEventListeners() {
+      // Global pointer down to hide context menu
+      document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('#contextMenu') && contextMenuData) {
+          hideContextMenu();
+        }
+      });
+
+      document.getElementById('contextDeleteBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        requestDelete();
+      });
+
+      document.getElementById('contextMoveBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!contextMenuData || contextMenuData.type !== 'folder') return;
+        folderToMove = contextMenuData.id;
+        hideContextMenu();
+        
+        const select = document.getElementById('moveTargetSelect');
+        select.innerHTML = '';
+        const movableFolders = getMovableFolders(folderToMove);
+        movableFolders.forEach(f => {
+          const option = document.createElement('option');
+          option.value = f.id;
+          option.textContent = f.name;
+          select.appendChild(option);
+        });
+        
+        openModal('moveModal');
+      });
+
+      // Ctrl + Left Arrow for back
+      window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const current = appState.folders.find(f => f.id === currentFolderId);
+          if (current && current.parentId) {
+            changeFolder(current.parentId);
+          }
+        }
+      });
+    }
+
+    // Boot
+    window.onload = init;
+
+  </script>
+</body>
+</html>
