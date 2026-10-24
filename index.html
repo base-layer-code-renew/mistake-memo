@@ -9,7 +9,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class', // classベースのダークモードを有効化
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -56,9 +56,21 @@
       transform: scale(1.02);
     }
 
-    /* 隠し要素 */
+    /* Hidden element helper */
     .hidden-force {
       display: none !important;
+    }
+
+    /* Editable area content-editable styling */
+    .rich-editor {
+      min-height: 120px;
+      outline: none;
+    }
+    .rich-editor:empty:before {
+      content: attr(placeholder);
+      color: #9ca3af;
+      pointer-events: none;
+      display: block;
     }
   </style>
 </head>
@@ -68,17 +80,21 @@
   <div id="toastContainer" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Context Menu -->
-  <div id="contextMenu" class="fixed z-[90] hidden-force pointer-events-auto flex-col gap-2">
-    <button id="contextMoveBtn" class="bg-gray-900 dark:bg-gray-800 hover:bg-blue-600 dark:hover:bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-xl transition-all border border-gray-700 ring-4 ring-black/10">
-      <i data-lucide="move-right" class="w-4 h-4"></i> 移動する
+  <div id="contextMenu" class="fixed z-[90] hidden-force pointer-events-auto flex-col gap-1 bg-gray-900 dark:bg-gray-800 p-1.5 rounded-2xl shadow-2xl border border-gray-700 ring-4 ring-black/10">
+    <button id="contextEditBtn" class="hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+      <i data-lucide="edit-3" class="w-4 h-4"></i> 編集する
     </button>
-    <button id="contextDeleteBtn" class="bg-gray-900 dark:bg-gray-800 hover:bg-red-600 dark:hover:bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-xl transition-all border border-gray-700 ring-4 ring-black/10">
+    <button id="contextMoveBtn" class="hover:bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+      <i data-lucide="folder-output" class="w-4 h-4"></i> 移動する
+    </button>
+    <button id="contextDeleteBtn" class="hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
       <i data-lucide="trash-2" class="w-4 h-4"></i> 削除する
     </button>
   </div>
 
-  <!-- Hidden File Input for Loading -->
+  <!-- Hidden File Input for Loading State -->
   <input type="file" id="fileInput" accept=".json" class="hidden">
+  <input type="file" id="imageAttachmentInput" accept="image/*" class="hidden">
 
   <header class="p-3 sticky top-0 z-30 flex items-center justify-between border-b bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm transition-colors">
     <!-- Left: Title & Settings -->
@@ -90,27 +106,46 @@
       </button>
     </div>
 
-    <!-- Center: Undo/Redo -->
+    <!-- Center: Undo/Redo & Multi-select Toolbar -->
     <div class="flex items-center gap-2 justify-center flex-1">
-      <button id="undoBtn" onclick="undo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="戻る (Ctrl+Z)">
-        <i data-lucide="undo-2" class="w-5 h-5"></i>
-      </button>
-      <button id="redoBtn" onclick="redo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="進む (Ctrl+Y)">
-        <i data-lucide="redo-2" class="w-5 h-5"></i>
-      </button>
+      <div id="normalToolbar" class="flex items-center gap-2">
+        <button id="undoBtn" onclick="undo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="戻る (Ctrl+Z)">
+          <i data-lucide="undo-2" class="w-5 h-5"></i>
+        </button>
+        <button id="redoBtn" onclick="redo()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent" title="進む (Ctrl+Y)">
+          <i data-lucide="redo-2" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Multi-select Controls (Visible only in selection mode) -->
+      <div id="batchToolbar" class="hidden-force items-center gap-2">
+        <button onclick="toggleSelectAll()" class="px-2.5 py-1.5 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200">
+          全選択
+        </button>
+        <button onclick="openBatchMoveModal()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1 shadow-sm">
+          <i data-lucide="folder-output" class="w-3.5 h-3.5"></i> 移動
+        </button>
+        <button onclick="openBatchDeleteModal()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-red-600 hover:bg-red-700 text-white flex items-center gap-1 shadow-sm">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 削除
+        </button>
+      </div>
     </div>
 
-    <!-- Right: Actions -->
+    <!-- Right: Actions & Batch Toggle Button -->
     <div class="flex items-center gap-1 sm:gap-2 justify-end flex-1">
+      <button id="batchToggleBtn" onclick="toggleBatchMode()" class="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors" title="一括選択">
+        一括選択
+      </button>
+
       <button onclick="openModal('saveModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="ファイルに保存">
         <i data-lucide="save" class="w-5 h-5"></i>
       </button>
-      <button onclick="document.getElementById('fileInput').click()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="ファイルから読み込み">
+      <button onclick="openModal('loadModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="データの読み込み">
         <i data-lucide="upload" class="w-5 h-5"></i>
       </button>
       <div class="w-px h-6 mx-1 bg-gray-200 dark:bg-gray-700"></div>
       
-      <button onclick="openModal('memoModal')" class="p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-colors" title="メモを記録">
+      <button onclick="openModal('memoModal')" class="p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-colors" title="メモを記録（￥キー）">
         <i data-lucide="pen-square" class="w-6 h-6"></i>
       </button>
       <button onclick="openModal('folderModal')" class="p-2 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-colors" title="新規フォルダ">
@@ -127,8 +162,9 @@
 
     <!-- Folders Section -->
     <section class="mb-8">
-      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1 flex items-center gap-2">
-        <i data-lucide="folder" class="w-4 h-4"></i> フォルダ <span class="text-xs font-normal opacity-70">(長押し移動で並び替え)</span>
+      <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1 flex items-center justify-between">
+        <span class="flex items-center gap-2"><i data-lucide="folder" class="w-4 h-4"></i> フォルダ <span class="text-xs font-normal opacity-70">(長押し移動で並び替え)</span></span>
+        <span id="folderBatchHint" class="text-xs text-indigo-500 hidden-force">※選択可能</span>
       </h2>
       <div id="foldersContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
         <!-- Injected by JS -->
@@ -146,41 +182,139 @@
     </section>
   </main>
 
-  <!-- Memo Modal -->
+  <!-- Memo Modal (with Color Toolbar, Photo & Canvas Attachments) -->
   <div id="memoModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-modal border border-gray-100 dark:border-gray-700 flex flex-col max-h-[90vh]">
       <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-gray-100">記録を追加</h3>
+        <h3 id="memoModalTitle" class="font-bold text-gray-800 dark:text-gray-100">記録を追加</h3>
         <button onclick="closeModal('memoModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      <div class="p-4">
-        <textarea id="memoInput" placeholder="間違えた問題の内容を入力..." rows="5" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
-        <div class="mt-6 flex gap-3">
-          <button onclick="closeModal('memoModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
-          <button onclick="saveMemo()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">完了</button>
+      <div class="p-4 overflow-y-auto grow flex flex-col gap-3">
+        <!-- Text Color Palette Toolbar -->
+        <div class="flex items-center gap-2 p-1.5 bg-gray-100 dark:bg-gray-900 rounded-xl">
+          <span class="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">文字色:</span>
+          <button type="button" onclick="formatText('foreColor', '#1f2937')" class="w-6 h-6 rounded-full bg-gray-800 border border-white shadow-sm" title="黒"></button>
+          <button type="button" onclick="formatText('foreColor', '#ef4444')" class="w-6 h-6 rounded-full bg-red-500 border border-white shadow-sm" title="赤"></button>
+          <button type="button" onclick="formatText('foreColor', '#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border border-white shadow-sm" title="青"></button>
+          <button type="button" onclick="formatText('foreColor', '#22c55e')" class="w-6 h-6 rounded-full bg-green-500 border border-white shadow-sm" title="緑"></button>
+          <button type="button" onclick="formatText('foreColor', '#eab308')" class="w-6 h-6 rounded-full bg-yellow-500 border border-white shadow-sm" title="黄"></button>
+          <button type="button" onclick="formatText('foreColor', '#a855f7')" class="w-6 h-6 rounded-full bg-purple-500 border border-white shadow-sm" title="紫"></button>
         </div>
+
+        <!-- Rich Input Editable Area -->
+        <div id="memoInput" contenteditable="true" placeholder="間違えた問題の内容を入力..." class="rich-editor w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-y min-h-[120px]"></div>
+
+        <!-- Attachment Tools -->
+        <div id="mediaAttachmentTools" class="hidden-force flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <button onclick="document.getElementById('imageAttachmentInput').click()" type="button" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors">
+            <i data-lucide="image" class="w-4 h-4"></i> 写真を追加
+          </button>
+          <button onclick="openCanvasModal()" type="button" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors">
+            <i data-lucide="pen-tool" class="w-4 h-4"></i> 手書き/お絵かき
+          </button>
+        </div>
+
+        <!-- Preview Attached Media -->
+        <div id="attachedImagePreview" class="relative hidden-force mt-2 inline-block max-w-full">
+          <img id="attachedImg" src="" class="max-h-48 rounded-xl border border-gray-200 dark:border-gray-700 object-contain bg-black/5">
+          <button onclick="removeAttachedImage()" class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 shadow-md hover:bg-red-700">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+        <button onclick="closeModal('memoModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+        <button onclick="saveMemo()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">完了</button>
       </div>
     </div>
   </div>
 
-  <!-- Folder Modal -->
+  <!-- Drawing/Canvas Modal -->
+  <div id="drawModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden-force items-center justify-center p-4 z-[60]">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700 flex flex-col">
+      <div class="flex justify-between items-center p-3 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5"><i data-lucide="pen-tool" class="w-4 h-4"></i> お絵かき・手書き</h3>
+        <button onclick="closeModal('drawModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-3 flex flex-col items-center gap-3">
+        <!-- Tools toolbar -->
+        <div class="flex items-center gap-3 w-full justify-between">
+          <div class="flex items-center gap-1">
+            <button onclick="setPenColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-white shadow-sm"></button>
+            <button onclick="setPenColor('#ef4444')" class="w-6 h-6 rounded-full bg-red-500 border border-white shadow-sm"></button>
+            <button onclick="setPenColor('#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border border-white shadow-sm"></button>
+            <button onclick="setPenColor('#22c55e')" class="w-6 h-6 rounded-full bg-green-500 border border-white shadow-sm"></button>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">太さ</span>
+            <input type="range" id="penSize" min="1" max="20" value="3" class="w-20">
+          </div>
+          <button onclick="clearCanvas()" class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded-lg">全消去</button>
+        </div>
+        <!-- Canvas Element -->
+        <canvas id="paintCanvas" width="360" height="260" class="border rounded-xl bg-white touch-none cursor-crosshair w-full h-[260px] border-gray-300 dark:border-gray-600 shadow-inner"></canvas>
+      </div>
+      <div class="p-3 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+        <button onclick="closeModal('drawModal')" class="flex-1 py-2.5 rounded-xl font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
+        <button onclick="applyCanvasDrawing()" class="flex-1 py-2.5 text-white bg-indigo-600 rounded-xl font-medium">画像として添付</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Folder Modal (Add / Edit) -->
   <div id="folderModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
       <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-gray-100">新規フォルダ</h3>
+        <h3 id="folderModalTitle" class="font-bold text-gray-800 dark:text-gray-100">新規フォルダ</h3>
         <button onclick="closeModal('folderModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div class="p-4">
         <input type="text" id="folderInput" placeholder="フォルダ名を入力..." class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
         <div class="mt-6 flex gap-3">
           <button onclick="closeModal('folderModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
-          <button onclick="saveFolder()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">追加</button>
+          <button onclick="saveFolder()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">決定</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Move Folder Modal -->
+  <!-- Batch Move Modal -->
+  <div id="batchMoveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-[80]">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2"><i data-lucide="folder-output" class="w-5 h-5 text-indigo-500"></i> 移動先を選択</h3>
+        <button onclick="closeModal('batchMoveModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div id="folderTreeContainer" class="p-4 overflow-y-auto grow space-y-1">
+        <!-- Injected folder tree UI -->
+      </div>
+      <div class="p-4 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+        <button onclick="closeModal('batchMoveModal')" class="flex-1 py-3 rounded-xl font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
+        <button onclick="executeBatchMove()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl font-medium hover:bg-indigo-700 transition-colors">ここへ移動</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Batch Delete Confirmation Modal -->
+  <div id="batchDeleteConfirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-[80]">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-red-100 dark:border-red-900/30">
+      <div class="flex flex-col items-center justify-center p-6 border-b bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400">
+        <i data-lucide="alert-triangle" class="w-12 h-12 mb-2"></i>
+        <h3 class="font-bold text-lg">一括削除の確認</h3>
+      </div>
+      <div class="p-4">
+        <p id="batchDeleteMsg" class="text-sm text-center mb-6 text-gray-600 dark:text-gray-300">
+          選択した項目を本当に削除しますか？
+        </p>
+        <div class="flex gap-3">
+          <button onclick="closeModal('batchDeleteConfirmModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
+          <button onclick="executeBatchDelete()" class="flex-1 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 font-medium transition-colors shadow-lg shadow-red-500/30">削除する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Single Move Folder Modal -->
   <div id="moveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
       <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
@@ -193,7 +327,7 @@
           <!-- Injected by JS -->
         </select>
         <div class="mt-6 flex gap-3">
-          <button onclick="closeModal('moveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="closeModal('moveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
           <button onclick="executeFolderMove()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">移動する</button>
         </div>
       </div>
@@ -214,8 +348,48 @@
           <span class="text-gray-500 dark:text-gray-400 font-medium">.json</span>
         </div>
         <div class="mt-6 flex gap-3">
-          <button onclick="closeModal('saveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
+          <button onclick="closeModal('saveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
           <button onclick="executeSaveToFile()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">保存する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Choice Modal -->
+  <div id="loadModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+          <i data-lucide="upload" class="w-5 h-5 text-indigo-500"></i> データ読み込み方法を選択
+        </h3>
+        <button onclick="closeModal('loadModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      
+      <div class="p-4 flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-3">
+          <button id="loadOptFileBtn" onclick="switchLoadOption('file')" class="p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all">
+            <i data-lucide="file-up" class="w-6 h-6"></i>
+            <span class="text-xs sm:text-sm">ファイルから選択</span>
+          </button>
+          <button id="loadOptCodeBtn" onclick="switchLoadOption('code')" class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all">
+            <i data-lucide="code" class="w-6 h-6"></i>
+            <span class="text-xs sm:text-sm">コード直接入力</span>
+          </button>
+        </div>
+
+        <div id="loadOptionFileView" class="p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-gray-900/50">
+          <p class="text-sm text-gray-600 dark:text-gray-300 text-center">保存したJSONファイルを選択して読み込みます</p>
+          <button onclick="document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
+            <i data-lucide="folder-open" class="w-4 h-4"></i> ファイルを探す
+          </button>
+        </div>
+
+        <div id="loadOptionCodeView" class="hidden-force flex flex-col gap-2">
+          <label class="text-xs font-bold text-gray-500 dark:text-gray-400">セーブデータ（JSONコード）を貼り付け:</label>
+          <textarea id="directCodeInput" placeholder='{"folders": [...], "memos": [...]}' class="w-full h-36 px-3 py-2 text-xs font-mono border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
+          <button onclick="executeLoadFromCode()" class="w-full py-3 mt-1 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i> 貼り付けたコードでロード
+          </button>
         </div>
       </div>
     </div>
@@ -229,9 +403,29 @@
         <button onclick="closeModal('settingsModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       
-      <div class="p-5 overflow-y-auto grow">
+      <div class="p-5 overflow-y-auto grow space-y-6">
+        <div>
+          <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">操作・動作設定</h4>
+          <div class="space-y-3">
+            <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-pointer">
+              <span class="text-sm font-medium">Enterキーで追加 / 完了</span>
+              <input type="checkbox" id="enterToSubmitToggle" onchange="toggleSetting('enterToSubmit')" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+            </label>
+            
+            <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-pointer">
+              <span class="text-sm font-medium">一括選択にフォルダも含める</span>
+              <input type="checkbox" id="batchIncludeFoldersToggle" onchange="toggleSetting('batchIncludeFolders')" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+            </label>
+
+            <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-pointer">
+              <span class="text-sm font-medium">写真 / お絵かき添付機能を有効化</span>
+              <input type="checkbox" id="enableMediaAttachmentsToggle" onchange="toggleSetting('enableMediaAttachments')" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+            </label>
+          </div>
+        </div>
+
         <!-- Theme -->
-        <div class="mb-6">
+        <div>
           <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">テーマ</h4>
           <div class="flex gap-3">
             <button onclick="setTheme('light')" id="theme-light-btn" class="flex-1 py-2 rounded-lg border font-medium">ライト</button>
@@ -240,7 +434,7 @@
         </div>
 
         <!-- Font Size -->
-        <div class="mb-6">
+        <div>
           <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">文字の大きさ</h4>
           <div class="flex gap-2">
             <button onclick="setFontSize('small')" id="font-small-btn" class="flex-1 py-2 rounded-lg border font-medium">小</button>
@@ -253,7 +447,7 @@
         <div>
           <h4 class="text-sm font-bold mb-3 flex items-center justify-between text-gray-500 dark:text-gray-400">
             回数と色のルール
-            <button id="addColorRuleBtn" onclick="addColorRule()" class="text-indigo-500 hover:text-indigo-600 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1 font-normal"><i data-lucide="plus-circle" class="w-4 h-4"></i> 追加</button>
+            <button id="addColorRuleBtn" onclick="addColorRule()" class="text-indigo-500 hover:text-indigo-600 disabled:text-gray-400 disabled:hover:text-gray-400 flex items-center gap-1 font-normal"><i data-lucide="plus-circle" class="w-4 h-4"></i> 追加</button>
           </h4>
           <div id="colorRulesContainer" class="space-y-3">
             <!-- Injected by JS -->
@@ -267,7 +461,7 @@
     </div>
   </div>
 
-  <!-- Delete Folder Confirm Modal -->
+  <!-- Delete Single Folder Confirm Modal -->
   <div id="deleteConfirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-[100]">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-red-100 dark:border-red-900/30">
       <div class="flex flex-col items-center justify-center p-6 border-b bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/50 text-red-600 dark:text-red-400">
@@ -276,11 +470,11 @@
       </div>
       <div class="p-4">
         <p class="text-sm text-center mb-6 text-gray-600 dark:text-gray-300">
-          このフォルダを削除すると、中のメモやサブフォルダも失われる可能性があります。
+          この項目を削除します。元には戻せません。
         </p>
         <div class="flex gap-3">
-          <button onclick="closeModal('deleteConfirmModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
-          <button onclick="executeFolderDelete()" class="flex-1 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 font-medium transition-colors shadow-lg shadow-red-500/30">削除する</button>
+          <button onclick="closeModal('deleteConfirmModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
+          <button onclick="executeSingleDelete()" class="flex-1 py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 font-medium transition-colors shadow-lg shadow-red-500/30">削除する</button>
         </div>
       </div>
     </div>
@@ -289,9 +483,12 @@
   <script>
     // --- Utilities ---
     const generateId = () => Math.random().toString(36).substring(2, 9);
-    const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({
+    const escapeHTML = (str) => {
+      if(!str) return '';
+      return str.replace(/[&<>'"]/g, tag => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag]));
+      }[tag]));
+    };
 
     const COLOR_OPTIONS = [
       { value: 'red', label: '赤色' },
@@ -306,7 +503,7 @@
       { value: 'gray', label: '灰色' },
     ];
 
-    // --- State Management ---
+    // --- Application State ---
     let appState = {
       folders: [{ id: 'root', name: 'すべてのノート', parentId: null }],
       memos: []
@@ -315,6 +512,9 @@
     let defaultSettings = {
       theme: 'light',
       fontSize: 'medium',
+      enterToSubmit: true,
+      batchIncludeFolders: true,
+      enableMediaAttachments: true,
       colorRules: [
         { id: 'r1', count: 3, color: 'red' },
         { id: 'r2', count: 2, color: 'orange' }
@@ -326,17 +526,32 @@
     let pastHistory = [];
     let futureHistory = [];
 
+    // Selection Mode State
+    let isBatchMode = false;
+    let selectedFolderIds = new Set();
+    let selectedMemoIds = new Set();
+    let selectedTargetFolderForBatchMove = null;
+
+    // Editing context
+    let editingMemoId = null;
+    let editingFolderId = null;
+    let currentImageAttachment = null; // Base64 string
+
     // Long press and drag logic
     let pointerTimer = null;
     let contextMenuData = null; // { type, id, x, y }
-    let folderToDelete = null; // Store id before confirmation
-    let folderToMove = null; // Store id for moving modal
+    let folderToMove = null; 
 
     let isLongPressed = false;
     let isDraggingFolder = false;
     let draggedFolderId = null;
     let dragStartCoords = { x: 0, y: 0 };
     let longPressTriggeredPos = { x: 0, y: 0 };
+
+    // Canvas State
+    let isDrawing = false;
+    let penColor = '#000000';
+    let canvasCtx = null;
 
     // --- Initialize ---
     function init() {
@@ -358,6 +573,7 @@
       applyTheme();
       renderAll();
       setupEventListeners();
+      setupCanvas();
       lucide.createIcons();
     }
 
@@ -369,6 +585,21 @@
       localStorage.setItem('mistake_app_settings', JSON.stringify(settings));
       applyTheme();
       renderAll();
+    }
+
+    function toggleSetting(key) {
+      settings[key] = !settings[key];
+      saveSettings();
+    }
+
+    function setTheme(theme) {
+      settings.theme = theme;
+      saveSettings();
+    }
+
+    function setFontSize(size) {
+      settings.fontSize = size;
+      saveSettings();
     }
 
     // --- History (Undo/Redo) ---
@@ -405,12 +636,41 @@
       renderMemos();
       updateButtons();
       renderSettingsModal();
+      updateMediaAttachmentUI();
       lucide.createIcons();
     }
 
     function updateButtons() {
       document.getElementById('undoBtn').disabled = pastHistory.length === 0;
       document.getElementById('redoBtn').disabled = futureHistory.length === 0;
+
+      const normalTb = document.getElementById('normalToolbar');
+      const batchTb = document.getElementById('batchToolbar');
+      const batchBtn = document.getElementById('batchToggleBtn');
+      const folderHint = document.getElementById('folderBatchHint');
+
+      if (isBatchMode) {
+        normalTb.classList.add('hidden-force');
+        batchTb.classList.remove('hidden-force');
+        batchTb.classList.add('flex');
+        batchBtn.classList.add('bg-indigo-600', 'text-white');
+        batchBtn.classList.remove('border', 'text-indigo-600');
+        batchBtn.textContent = `選択完了 (${selectedFolderIds.size + selectedMemoIds.size})`;
+
+        if (settings.batchIncludeFolders) {
+          folderHint.classList.remove('hidden-force');
+        } else {
+          folderHint.classList.add('hidden-force');
+        }
+      } else {
+        normalTb.classList.remove('hidden-force');
+        batchTb.classList.add('hidden-force');
+        batchTb.classList.remove('flex');
+        batchBtn.classList.remove('bg-indigo-600', 'text-white');
+        batchBtn.classList.add('border', 'text-indigo-600');
+        batchBtn.textContent = '一括選択';
+        folderHint.classList.add('hidden-force');
+      }
     }
 
     function applyTheme() {
@@ -418,6 +678,15 @@
         document.documentElement.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
+      }
+    }
+
+    function updateMediaAttachmentUI() {
+      const tools = document.getElementById('mediaAttachmentTools');
+      if (settings.enableMediaAttachments) {
+        tools.classList.remove('hidden-force');
+      } else {
+        tools.classList.add('hidden-force');
       }
     }
 
@@ -461,18 +730,26 @@
       container.innerHTML = '';
       childFolders.forEach(folder => {
         const div = document.createElement('div');
-        div.className = "folder-item bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer flex items-center justify-between group transition-all select-none";
+        const isSelected = selectedFolderIds.has(folder.id);
+        
+        div.className = `folder-item bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border ${isSelected ? 'border-indigo-600 ring-2 ring-indigo-500/30' : 'border-gray-100 dark:border-gray-700'} hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer flex items-center justify-between group transition-all select-none`;
         div.dataset.folderId = folder.id;
 
-        // Context menu and reordering events on pointer
         div.addEventListener('pointerdown', (e) => onFolderPointerDown(e, folder.id));
         div.addEventListener('pointermove', (e) => onFolderPointerMove(e, folder.id));
         div.addEventListener('pointerup', (e) => onFolderPointerUp(e, folder.id));
         div.addEventListener('pointercancel', (e) => onFolderPointerCancel(e));
         div.addEventListener('contextmenu', e => e.preventDefault());
 
+        const selectIcon = (isBatchMode && settings.batchIncludeFolders) ? `
+          <div class="w-5 h-5 rounded-md border flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
+            ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+          </div>
+        ` : '';
+
         div.innerHTML = `
           <div class="flex items-center gap-3 w-full pointer-events-none">
+            ${selectIcon}
             <div class="text-indigo-500 dark:text-indigo-400">
               <i data-lucide="folder" class="w-6 h-6"></i>
             </div>
@@ -483,7 +760,7 @@
       });
     }
 
-    // --- Folder Drag & Swap / Long Press Logic ---
+    // --- Folder Pointer / Drag & Drop / Long Press ---
     function onFolderPointerDown(e, folderId) {
       if (e.button !== 0 && e.button !== undefined) return;
       hideContextMenu();
@@ -510,7 +787,6 @@
       const y = e.clientY || (e.touches && e.touches[0].clientY);
       const dist = Math.hypot(x - dragStartCoords.x, y - dragStartCoords.y);
 
-      // If user moves before long-press timeout, cancel long press
       if (!isLongPressed && dist > 10) {
         if (pointerTimer) {
           clearTimeout(pointerTimer);
@@ -519,15 +795,13 @@
         return;
       }
 
-      // If long press reached and user moves finger/mouse -> start drag reorder mode
-      if (isLongPressed && dist > 8) {
+      if (isLongPressed && dist > 8 && !isBatchMode) {
         if (!isDraggingFolder) {
           isDraggingFolder = true;
           const draggedElem = document.querySelector(`.folder-item[data-folder-id="${draggedFolderId}"]`);
           if (draggedElem) draggedElem.classList.add('dragging');
         }
 
-        // Highlight target folder hover element
         const elemBelow = document.elementFromPoint(x, y);
         const folderElemBelow = elemBelow ? elemBelow.closest('.folder-item') : null;
 
@@ -548,7 +822,6 @@
       const y = e.clientY || (e.changedTouches && e.changedTouches[0].clientY) || dragStartCoords.y;
 
       if (isDraggingFolder) {
-        // Drag end: execute swap if dropped on another folder
         const elemBelow = document.elementFromPoint(x, y);
         const folderElemBelow = elemBelow ? elemBelow.closest('.folder-item') : null;
 
@@ -558,12 +831,20 @@
           showToast('フォルダの位置を入れ替えました');
         }
       } else if (isLongPressed) {
-        // Finger did not move enough after long-press -> trigger original context menu
-        contextMenuData = { type: 'folder', id: folderId, x: longPressTriggeredPos.x, y: longPressTriggeredPos.y };
-        showContextMenu();
+        if (isBatchMode) {
+          toggleFolderSelection(folderId);
+        } else {
+          contextMenuData = { type: 'folder', id: folderId, x: longPressTriggeredPos.x, y: longPressTriggeredPos.y };
+          showContextMenu();
+        }
       } else {
-        // Normal short click -> navigate into folder
-        if (!contextMenuData) {
+        if (isBatchMode) {
+          if (settings.batchIncludeFolders) {
+            toggleFolderSelection(folderId);
+          } else {
+            changeFolder(folderId);
+          }
+        } else if (!contextMenuData) {
           changeFolder(folderId);
         }
       }
@@ -601,7 +882,7 @@
       }
     }
 
-    // Colors mapper based on logic
+    // Color mapper for Memos
     function getColorClasses(count) {
       const sortedRules = [...settings.colorRules].sort((a, b) => b.count - a.count);
       const matchedRule = sortedRules.find(rule => count >= rule.count);
@@ -676,8 +957,9 @@
       container.innerHTML = '';
       memos.forEach(memo => {
         const colors = getColorClasses(memo.count);
+        const isSelected = selectedMemoIds.has(memo.id);
         const div = document.createElement('div');
-        div.className = `relative flex-auto min-w-[200px] max-w-full p-4 rounded-xl border transition-all flex items-start justify-between gap-4 group select-none cursor-pointer shadow-sm ${colors.box}`;
+        div.className = `relative flex-auto min-w-[200px] max-w-full p-4 rounded-xl border transition-all flex items-start justify-between gap-4 group select-none cursor-pointer shadow-sm ${isSelected ? 'border-indigo-600 ring-2 ring-indigo-500/30' : colors.box}`;
         
         div.addEventListener('pointerdown', (e) => onMemoPointerDown(e, 'memo', memo.id));
         div.addEventListener('pointerup', onMemoPointerUpOrMove);
@@ -685,8 +967,10 @@
         div.addEventListener('pointercancel', onMemoPointerUpOrMove);
         div.addEventListener('contextmenu', e => e.preventDefault());
         
-        div.addEventListener('click', (e) => {
-          if (!contextMenuData) {
+        div.addEventListener('click', () => {
+          if (isBatchMode) {
+            toggleMemoSelection(memo.id);
+          } else if (!contextMenuData) {
             copyToClipboard(memo.text);
           }
         });
@@ -695,13 +979,31 @@
                               settings.fontSize === 'large' ? 'text-base md:text-xl' : 
                               'text-sm md:text-base';
 
+        const selectIcon = isBatchMode ? `
+          <div class="w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
+            ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+          </div>
+        ` : '';
+
+        const attachedImgHTML = memo.imageUrl ? `
+          <div class="mt-2">
+            <img src="${memo.imageUrl}" class="max-h-40 rounded-lg border border-black/10 dark:border-white/10 object-contain">
+          </div>
+        ` : '';
+
         div.innerHTML = `
-          <p class="whitespace-pre-wrap break-words flex-1 leading-relaxed pointer-events-none ${fontSizeClass}">
-            ${escapeHTML(memo.text)}
-          </p>
-          <div class="flex flex-col items-end gap-2 flex-shrink-0 pointer-events-none">
-            <div class="flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm ${colors.badge}">
-              × ${memo.count}
+          <div class="flex gap-3 w-full items-start">
+            ${selectIcon}
+            <div class="flex-1 overflow-hidden">
+              <div class="whitespace-pre-wrap break-words leading-relaxed pointer-events-none ${fontSizeClass}">
+                ${memo.html || escapeHTML(memo.text)}
+              </div>
+              ${attachedImgHTML}
+            </div>
+            <div class="flex flex-col items-end gap-2 shrink-0 pointer-events-none">
+              <div class="flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm ${colors.badge}">
+                × ${memo.count}
+              </div>
             </div>
           </div>
         `;
@@ -709,7 +1011,6 @@
       });
     }
 
-    // Memo pointer events
     function onMemoPointerDown(e, type, id) {
       if (e.button !== 0 && e.button !== undefined) return;
       hideContextMenu();
@@ -718,9 +1019,13 @@
       const y = e.clientY || (e.touches && e.touches[0].clientY);
 
       pointerTimer = setTimeout(() => {
-        contextMenuData = { type, id, x, y };
-        if (navigator.vibrate) navigator.vibrate(50);
-        showContextMenu();
+        if (isBatchMode) {
+          toggleMemoSelection(id);
+        } else {
+          contextMenuData = { type, id, x, y };
+          if (navigator.vibrate) navigator.vibrate(50);
+          showContextMenu();
+        }
       }, 600);
     }
 
@@ -729,6 +1034,145 @@
         clearTimeout(pointerTimer);
         pointerTimer = null;
       }
+    }
+
+    // --- Multi-Select Batch Operations ---
+    function toggleBatchMode() {
+      isBatchMode = !isBatchMode;
+      selectedFolderIds.clear();
+      selectedMemoIds.clear();
+      renderAll();
+    }
+
+    function toggleFolderSelection(id) {
+      if (selectedFolderIds.has(id)) selectedFolderIds.delete(id);
+      else selectedFolderIds.add(id);
+      renderAll();
+    }
+
+    function toggleMemoSelection(id) {
+      if (selectedMemoIds.has(id)) selectedMemoIds.delete(id);
+      else selectedMemoIds.add(id);
+      renderAll();
+    }
+
+    function toggleSelectAll() {
+      const childFolders = appState.folders.filter(f => f.parentId === currentFolderId);
+      const childMemos = appState.memos.filter(m => m.folderId === currentFolderId);
+
+      const allFoldersSelected = settings.batchIncludeFolders && childFolders.every(f => selectedFolderIds.has(f.id));
+      const allMemosSelected = childMemos.every(m => selectedMemoIds.has(m.id));
+
+      if (allFoldersSelected && allMemosSelected) {
+        selectedFolderIds.clear();
+        selectedMemoIds.clear();
+      } else {
+        if (settings.batchIncludeFolders) {
+          childFolders.forEach(f => selectedFolderIds.add(f.id));
+        }
+        childMemos.forEach(m => selectedMemoIds.add(m.id));
+      }
+      renderAll();
+    }
+
+    function openBatchDeleteModal() {
+      const total = selectedFolderIds.size + selectedMemoIds.size;
+      if (total === 0) {
+        showToast('項目が選択されていません');
+        return;
+      }
+      document.getElementById('batchDeleteMsg').textContent = `選択した ${total} 個の項目（フォルダ/メモ）を本当に削除しますか？`;
+      openModal('batchDeleteConfirmModal');
+    }
+
+    function executeBatchDelete() {
+      const newState = {
+        folders: appState.folders.filter(f => !selectedFolderIds.has(f.id)),
+        memos: appState.memos.filter(m => !selectedMemoIds.has(m.id))
+      };
+      updateState(newState);
+      selectedFolderIds.clear();
+      selectedMemoIds.clear();
+      closeModal('batchDeleteConfirmModal');
+      showToast('選択した項目を削除しました');
+    }
+
+    function openBatchMoveModal() {
+      const total = selectedFolderIds.size + selectedMemoIds.size;
+      if (total === 0) {
+        showToast('項目が選択されていません');
+        return;
+      }
+      renderFolderTree();
+      openModal('batchMoveModal');
+    }
+
+    function renderFolderTree() {
+      const container = document.getElementById('folderTreeContainer');
+      container.innerHTML = '';
+      selectedTargetFolderForBatchMove = 'root';
+
+      function buildTreeHTML(parentId, level = 0) {
+        const children = appState.folders.filter(f => f.parentId === parentId);
+        let html = '';
+        children.forEach(folder => {
+          if (selectedFolderIds.has(folder.id)) return;
+
+          const isSelected = selectedTargetFolderForBatchMove === folder.id;
+          const padding = level * 16 + 12;
+
+          html += `
+            <div onclick="selectBatchMoveTarget('${folder.id}')" id="tree-node-${folder.id}" class="folder-tree-node flex items-center gap-2 p-2.5 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors border ${isSelected ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 font-bold' : 'border-transparent text-gray-700 dark:text-gray-200'}" style="padding-left: ${padding}px;">
+              <i data-lucide="folder" class="w-4 h-4 text-indigo-500 shrink-0"></i>
+              <span class="text-sm truncate">${escapeHTML(folder.name)}</span>
+            </div>
+          `;
+          html += buildTreeHTML(folder.id, level + 1);
+        });
+        return html;
+      }
+
+      container.innerHTML = buildTreeHTML(null, 0);
+      lucide.createIcons();
+    }
+
+    function selectBatchMoveTarget(id) {
+      selectedTargetFolderForBatchMove = id;
+      document.querySelectorAll('.folder-tree-node').forEach(node => {
+        node.classList.remove('border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-900/40', 'text-indigo-600', 'font-bold');
+        node.classList.add('border-transparent');
+      });
+      const selectedNode = document.getElementById(`tree-node-${id}`);
+      if (selectedNode) {
+        selectedNode.classList.add('border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-900/40', 'text-indigo-600', 'font-bold');
+        selectedNode.classList.remove('border-transparent');
+      }
+    }
+
+    function executeBatchMove() {
+      if (!selectedTargetFolderForBatchMove) return;
+
+      const newState = {
+        folders: appState.folders.map(f => {
+          if (selectedFolderIds.has(f.id)) return { ...f, parentId: selectedTargetFolderForBatchMove };
+          return f;
+        }),
+        memos: appState.memos.map(m => {
+          if (selectedMemoIds.has(m.id)) return { ...m, folderId: selectedTargetFolderForBatchMove };
+          return m;
+        })
+      };
+
+      updateState(newState);
+      selectedFolderIds.clear();
+      selectedMemoIds.clear();
+      closeModal('batchMoveModal');
+      showToast('選択した項目を移動しました');
+    }
+
+    // --- Rich Text Editor & CRUD Operations ---
+    function formatText(cmd, value = null) {
+      document.execCommand(cmd, false, value);
     }
 
     function copyToClipboard(text) {
@@ -753,6 +1197,289 @@
       renderAll();
     }
 
+    function saveMemo() {
+      const editor = document.getElementById('memoInput');
+      const htmlContent = editor.innerHTML.trim();
+      const textContent = editor.innerText.trim();
+
+      if (!textContent && !htmlContent && !currentImageAttachment) {
+        showToast('内容が入力されていません');
+        return;
+      }
+
+      if (editingMemoId) {
+        const newState = {
+          ...appState,
+          memos: appState.memos.map(m => {
+            if (m.id === editingMemoId) {
+              return {
+                ...m,
+                html: htmlContent,
+                text: textContent,
+                imageUrl: currentImageAttachment
+              };
+            }
+            return m;
+          })
+        };
+        updateState(newState);
+        showToast('メモを更新しました');
+      } else {
+        const duplicateIndex = appState.memos.findIndex(m => 
+          m.folderId === currentFolderId && (m.text === textContent || (m.html && m.html === htmlContent))
+        );
+
+        if (duplicateIndex !== -1) {
+          const newState = { ...appState, memos: [...appState.memos] };
+          newState.memos[duplicateIndex].count += 1;
+          if (currentImageAttachment) {
+            newState.memos[duplicateIndex].imageUrl = currentImageAttachment;
+          }
+          updateState(newState);
+          showToast('間違えた回数をカウントアップしました！');
+        } else {
+          const newMemo = {
+            id: generateId(),
+            folderId: currentFolderId,
+            html: htmlContent,
+            text: textContent,
+            count: 1,
+            imageUrl: currentImageAttachment
+          };
+          updateState({ ...appState, memos: [...appState.memos, newMemo] });
+          showToast('新しいメモを追加しました');
+        }
+      }
+
+      closeModal('memoModal');
+      editingMemoId = null;
+      currentImageAttachment = null;
+    }
+
+    function saveFolder() {
+      const input = document.getElementById('folderInput');
+      const name = input.value.trim();
+
+      if (!name) {
+        showToast('フォルダ名を入力してください');
+        return;
+      }
+
+      if (editingFolderId) {
+        const newState = {
+          ...appState,
+          folders: appState.folders.map(f => f.id === editingFolderId ? { ...f, name } : f)
+        };
+        updateState(newState);
+        showToast('フォルダ名を変更しました');
+      } else {
+        const newFolder = {
+          id: generateId(),
+          name,
+          parentId: currentFolderId
+        };
+        updateState({ ...appState, folders: [...appState.folders, newFolder] });
+        showToast('新規フォルダを作成しました');
+      }
+
+      closeModal('folderModal');
+      editingFolderId = null;
+    }
+
+    function openEditContextModal() {
+      if (!contextMenuData) return;
+      const { type, id } = contextMenuData;
+      hideContextMenu();
+
+      if (type === 'folder') {
+        const folder = appState.folders.find(f => f.id === id);
+        if (folder) {
+          editingFolderId = id;
+          document.getElementById('folderModalTitle').textContent = 'フォルダ名を編集';
+          document.getElementById('folderInput').value = folder.name;
+          openModal('folderModal');
+        }
+      } else if (type === 'memo') {
+        const memo = appState.memos.find(m => m.id === id);
+        if (memo) {
+          editingMemoId = id;
+          document.getElementById('memoModalTitle').textContent = 'メモを編集';
+          document.getElementById('memoInput').innerHTML = memo.html || memo.text;
+          
+          if (memo.imageUrl) {
+            currentImageAttachment = memo.imageUrl;
+            document.getElementById('attachedImg').src = memo.imageUrl;
+            document.getElementById('attachedImagePreview').classList.remove('hidden-force');
+          } else {
+            removeAttachedImage();
+          }
+          openModal('memoModal');
+        }
+      }
+    }
+
+    function requestDelete() {
+      if (!contextMenuData) return;
+      openModal('deleteConfirmModal');
+    }
+
+    function executeSingleDelete() {
+      if (!contextMenuData) return;
+      const { type, id } = contextMenuData;
+
+      if (type === 'folder') {
+        const idsToDelete = new Set([id]);
+        
+        function collectSubFolderIds(parentId) {
+          appState.folders.filter(f => f.parentId === parentId).forEach(child => {
+            idsToDelete.add(child.id);
+            collectSubFolderIds(child.id);
+          });
+        }
+        collectSubFolderIds(id);
+
+        const newState = {
+          folders: appState.folders.filter(f => !idsToDelete.has(f.id)),
+          memos: appState.memos.filter(m => !idsToDelete.has(m.folderId))
+        };
+        updateState(newState);
+        showToast('フォルダを削除しました');
+      } else if (type === 'memo') {
+        const newState = {
+          ...appState,
+          memos: appState.memos.filter(m => m.id !== id)
+        };
+        updateState(newState);
+        showToast('メモを削除しました');
+      }
+
+      closeModal('deleteConfirmModal');
+      hideContextMenu();
+    }
+
+    function getMovableFolders(targetId) {
+      const invalidIds = new Set([targetId]);
+      function collectChildren(id) {
+        appState.folders.filter(f => f.parentId === id).forEach(child => {
+          invalidIds.add(child.id);
+          collectChildren(child.id);
+        });
+      }
+      collectChildren(targetId);
+
+      return appState.folders.filter(f => !invalidIds.has(f.id));
+    }
+
+    function executeFolderMove() {
+      if (!folderToMove) return;
+      const select = document.getElementById('moveTargetSelect');
+      const targetParentId = select.value;
+
+      const newState = {
+        ...appState,
+        folders: appState.folders.map(f => f.id === folderToMove ? { ...f, parentId: targetParentId } : f)
+      };
+
+      updateState(newState);
+      closeModal('moveModal');
+      folderToMove = null;
+      showToast('フォルダを移動しました');
+    }
+
+    // --- Media & Drawing attachments ---
+    document.getElementById('imageAttachmentInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        currentImageAttachment = event.target.result;
+        document.getElementById('attachedImg').src = currentImageAttachment;
+        document.getElementById('attachedImagePreview').classList.remove('hidden-force');
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+    function removeAttachedImage() {
+      currentImageAttachment = null;
+      document.getElementById('attachedImg').src = '';
+      document.getElementById('attachedImagePreview').classList.add('hidden-force');
+    }
+
+    function openCanvasModal() {
+      openModal('drawModal');
+      clearCanvas();
+    }
+
+    function setupCanvas() {
+      const canvas = document.getElementById('paintCanvas');
+      canvasCtx = canvas.getContext('2d');
+
+      const getCoords = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+          x: (clientX - rect.left) * (canvas.width / rect.width),
+          y: (clientY - rect.top) * (canvas.height / rect.height)
+        };
+      };
+
+      const startDrawing = (e) => {
+        isDrawing = true;
+        const pos = getCoords(e);
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(pos.x, pos.y);
+      };
+
+      const draw = (e) => {
+        if (!isDrawing) return;
+        const pos = getCoords(e);
+        const size = document.getElementById('penSize').value;
+        canvasCtx.lineTo(pos.x, pos.y);
+        canvasCtx.strokeStyle = penColor;
+        canvasCtx.lineWidth = size;
+        canvasCtx.lineCap = 'round';
+        canvasCtx.lineJoin = 'round';
+        canvasCtx.stroke();
+      };
+
+      const stopDrawing = () => {
+        isDrawing = false;
+      };
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseleave', stopDrawing);
+
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+      canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function setPenColor(color) {
+      penColor = color;
+    }
+
+    function clearCanvas() {
+      const canvas = document.getElementById('paintCanvas');
+      if (canvasCtx) {
+        canvasCtx.fillStyle = '#ffffff';
+        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    function applyCanvasDrawing() {
+      const canvas = document.getElementById('paintCanvas');
+      currentImageAttachment = canvas.toDataURL('image/png');
+      document.getElementById('attachedImg').src = currentImageAttachment;
+      document.getElementById('attachedImagePreview').classList.remove('hidden-force');
+      closeModal('drawModal');
+    }
+
+    // --- Settings UI Helper ---
     function renderSettingsModal() {
       const isDark = settings.theme === 'dark';
       document.getElementById('theme-light-btn').className = `flex-1 py-2 rounded-lg border font-medium ${!isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
@@ -764,53 +1491,44 @@
         btn.className = `flex-1 py-2 rounded-lg border font-medium ${active ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
       });
 
+      document.getElementById('enterToSubmitToggle').checked = settings.enterToSubmit;
+      document.getElementById('batchIncludeFoldersToggle').checked = settings.batchIncludeFolders;
+      document.getElementById('enableMediaAttachmentsToggle').checked = settings.enableMediaAttachments;
+
       const addBtn = document.getElementById('addColorRuleBtn');
-      if (settings.colorRules.length >= 5) {
-        addBtn.disabled = true;
-      } else {
-        addBtn.disabled = false;
-      }
+      addBtn.disabled = settings.colorRules.length >= 5;
 
       const container = document.getElementById('colorRulesContainer');
       const sortedRules = [...settings.colorRules].sort((a,b) => b.count - a.count);
       
-      if (sortedRules.length === 0) {
-        container.innerHTML = `<p class="text-sm text-center py-2 text-gray-400">ルールはありません。</p>`;
-      } else {
-        container.innerHTML = sortedRules.map(rule => `
-          <div class="flex items-center gap-3 p-3 rounded-lg border bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
-            <input type="number" min="1" value="${rule.count}" 
-              onchange="updateColorRule('${rule.id}', 'count', this.value)"
-              class="w-16 px-2 py-1.5 rounded border focus:ring-1 focus:ring-indigo-500 text-center bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-            <span class="text-gray-600 dark:text-gray-400">回以上で</span>
-            <select onchange="updateColorRule('${rule.id}', 'color', this.value)"
-              class="flex-1 px-2 py-1.5 rounded border focus:ring-1 focus:ring-indigo-500 bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
-              ${COLOR_OPTIONS.map(opt => `<option value="${opt.value}" ${rule.color === opt.value ? 'selected' : ''}>${opt.label}</option>`).join('')}
-            </select>
-            <button onclick="deleteColorRule('${rule.id}')" class="text-gray-400 hover:text-red-500 p-1">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          </div>
-        `).join('');
-      }
-      lucide.createIcons();
+      container.innerHTML = sortedRules.map(rule => `
+        <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
+          <span class="text-xs text-gray-500 shrink-0">間違い回数:</span>
+          <input type="number" min="1" value="${rule.count}" onchange="updateColorRule('${rule.id}', 'count', this.value)" class="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-center font-bold">
+          <span class="text-xs text-gray-500 shrink-0">以上で</span>
+          <select onchange="updateColorRule('${rule.id}', 'color', this.value)" class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
+            ${COLOR_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === rule.color ? 'selected' : ''}>${opt.label}</option>`).join('')}
+          </select>
+          <button onclick="deleteColorRule('${rule.id}')" class="p-1 text-red-500 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+        </div>
+      `).join('');
     }
 
     function addColorRule() {
-      if (settings.colorRules.length >= 5) {
-        showToast('色のルールは最大5つまでです');
-        return;
-      }
-      settings.colorRules.push({ id: generateId(), count: 1, color: 'blue' });
+      if (settings.colorRules.length >= 5) return;
+      const newRule = { id: generateId(), count: 1, color: 'blue' };
+      settings.colorRules.push(newRule);
       saveSettings();
     }
-    
-    function updateColorRule(id, key, value) {
-      const rule = settings.colorRules.find(r => r.id === id);
-      if (rule) {
-        rule[key] = key === 'count' ? Number(value) : value;
-        saveSettings();
-      }
+
+    function updateColorRule(id, key, val) {
+      settings.colorRules = settings.colorRules.map(r => {
+        if (r.id === id) {
+          return { ...r, [key]: key === 'count' ? Math.max(1, parseInt(val) || 1) : val };
+        }
+        return r;
+      });
+      saveSettings();
     }
 
     function deleteColorRule(id) {
@@ -818,129 +1536,51 @@
       saveSettings();
     }
 
-    function setTheme(theme) {
-      settings.theme = theme;
-      saveSettings();
-    }
+    // --- File IO & Direct Code Load ---
+    function switchLoadOption(opt) {
+      const fileBtn = document.getElementById('loadOptFileBtn');
+      const codeBtn = document.getElementById('loadOptCodeBtn');
+      const fileView = document.getElementById('loadOptionFileView');
+      const codeView = document.getElementById('loadOptionCodeView');
 
-    function setFontSize(size) {
-      settings.fontSize = size;
-      saveSettings();
-    }
-
-    // --- Data Actions ---
-    function saveFolder() {
-      const input = document.getElementById('folderInput');
-      const name = input.value.trim();
-      if (!name) return;
-
-      const newState = { ...appState, folders: [...appState.folders] };
-      newState.folders.push({
-        id: generateId(),
-        name,
-        parentId: currentFolderId
-      });
-
-      updateState(newState);
-      input.value = '';
-      closeModal('folderModal');
-    }
-
-    function saveMemo() {
-      const input = document.getElementById('memoInput');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const newState = { ...appState, memos: [...appState.memos] };
-      const existingIndex = newState.memos.findIndex(m => m.folderId === currentFolderId && m.text === text);
-
-      if (existingIndex >= 0) {
-        newState.memos[existingIndex] = {
-          ...newState.memos[existingIndex],
-          count: newState.memos[existingIndex].count + 1
-        };
+      if (opt === 'file') {
+        fileBtn.className = "p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all";
+        codeBtn.className = "p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all";
+        fileView.classList.remove('hidden-force');
+        codeView.classList.add('hidden-force');
       } else {
-        newState.memos.push({
-          id: generateId(),
-          text,
-          count: 1,
-          folderId: currentFolderId
-        });
-      }
-
-      updateState(newState);
-      input.value = '';
-      closeModal('memoModal');
-    }
-
-    function requestDelete() {
-      if (!contextMenuData) return;
-      hideContextMenu();
-
-      if (contextMenuData.type === 'folder') {
-        folderToDelete = contextMenuData.id;
-        openModal('deleteConfirmModal');
-      } else {
-        const newState = {
-          ...appState,
-          memos: appState.memos.filter(m => m.id !== contextMenuData.id)
-        };
-        updateState(newState);
-        showToast('メモを削除しました');
+        codeBtn.className = "p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all";
+        fileBtn.className = "p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all";
+        codeView.classList.remove('hidden-force');
+        fileView.classList.add('hidden-force');
+        setTimeout(() => document.getElementById('directCodeInput').focus(), 100);
       }
     }
 
-    function executeFolderDelete() {
-      if (!folderToDelete) return;
-      const newState = {
-        ...appState,
-        folders: appState.folders.filter(f => f.id !== folderToDelete)
-      };
-      updateState(newState);
-      folderToDelete = null;
-      closeModal('deleteConfirmModal');
-      showToast('フォルダを削除しました');
+    function executeLoadFromCode() {
+      const rawCode = document.getElementById('directCodeInput').value.trim();
+      if (!rawCode) {
+        showToast('コードが入力されていません');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawCode);
+        if (parsed && parsed.folders && parsed.memos) {
+          updateState(parsed);
+          currentFolderId = 'root';
+          renderAll();
+          document.getElementById('directCodeInput').value = '';
+          closeModal('loadModal');
+          showToast("コードからデータを読み込みました");
+        } else {
+          showToast("無効なセーブデータフォーマットです");
+        }
+      } catch (err) {
+        showToast("JSONコードの解析に失敗しました");
+      }
     }
 
-    function getDescendantFolderIds(folderId) {
-      const descendants = [];
-      const getChildren = (id) => {
-        const children = appState.folders.filter(f => f.parentId === id);
-        children.forEach(c => {
-          descendants.push(c.id);
-          getChildren(c.id);
-        });
-      };
-      getChildren(folderId);
-      return descendants;
-    }
-
-    function getMovableFolders(folderId) {
-      if (!folderId) return [];
-      const descendants = getDescendantFolderIds(folderId);
-      const invalidIds = new Set([folderId, ...descendants]);
-      return appState.folders.filter(f => !invalidIds.has(f.id));
-    }
-
-    function executeFolderMove() {
-      if (!folderToMove) return;
-      const targetId = document.getElementById('moveTargetSelect').value;
-      const newState = {
-        ...appState,
-        folders: appState.folders.map(f => {
-          if (f.id === folderToMove) {
-            return { ...f, parentId: targetId };
-          }
-          return f;
-        })
-      };
-      updateState(newState);
-      folderToMove = null;
-      closeModal('moveModal');
-      showToast('フォルダを移動しました');
-    }
-
-    // --- File IO ---
     async function executeSaveToFile() {
       const nameInput = document.getElementById('saveFileNameInput').value.trim();
       const fileName = nameInput ? `${nameInput}.json` : 'mistake_notes.json';
@@ -975,8 +1615,6 @@
       closeModal('saveModal');
     }
 
-    function saveToFile() { openModal('saveModal'); }
-
     document.getElementById('fileInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -988,7 +1626,8 @@
             updateState(parsed);
             currentFolderId = 'root';
             renderAll();
-            showToast("データを読み込みました");
+            closeModal('loadModal');
+            showToast("ファイルからデータを読み込みました");
           }
         } catch(err) {
           showToast("読み込みに失敗しました");
@@ -1000,10 +1639,19 @@
 
     // --- UI Helpers & Events ---
     function openModal(id) {
+      if (id === 'memoModal' && !editingMemoId) {
+        document.getElementById('memoModalTitle').textContent = '記録を追加';
+        document.getElementById('memoInput').innerHTML = '';
+        removeAttachedImage();
+      } else if (id === 'folderModal' && !editingFolderId) {
+        document.getElementById('folderModalTitle').textContent = '新規フォルダ';
+        document.getElementById('folderInput').value = '';
+      }
+
       const el = document.getElementById(id);
       el.classList.remove('hidden-force');
       el.classList.add('flex');
-      const input = el.querySelector('input, textarea');
+      const input = el.querySelector('input, [contenteditable="true"]');
       if(input) setTimeout(() => input.focus(), 100);
     }
 
@@ -1011,6 +1659,9 @@
       const el = document.getElementById(id);
       el.classList.add('hidden-force');
       el.classList.remove('flex');
+
+      if (id === 'memoModal') editingMemoId = null;
+      if (id === 'folderModal') editingFolderId = null;
     }
 
     function showToast(msg) {
@@ -1033,18 +1684,17 @@
       
       if (contextMenuData.type === 'folder') {
         moveBtn.classList.remove('hidden-force');
-        menu.classList.add('flex');
       } else {
         moveBtn.classList.add('hidden-force');
-        menu.classList.add('flex');
       }
 
       menu.classList.remove('hidden-force');
+      menu.classList.add('flex');
       
       let left = contextMenuData.x + 10;
       let top = Math.max(contextMenuData.y - 50, 10);
       
-      if (left + 120 > window.innerWidth) left = window.innerWidth - 130;
+      if (left + 140 > window.innerWidth) left = window.innerWidth - 150;
       
       menu.style.left = `${left}px`;
       menu.style.top = `${top}px`;
@@ -1061,6 +1711,11 @@
         if (!e.target.closest('#contextMenu') && contextMenuData) {
           hideContextMenu();
         }
+      });
+
+      document.getElementById('contextEditBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEditContextModal();
       });
 
       document.getElementById('contextDeleteBtn').addEventListener('click', (e) => {
@@ -1087,7 +1742,23 @@
         openModal('moveModal');
       });
 
+      // Keyboard Shortcuts & Enter-to-Submit
       window.addEventListener('keydown', (e) => {
+        if ((e.key === '¥' || e.key === '\\') && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
+          e.preventDefault();
+          openModal('memoModal');
+        }
+
+        if (e.key === 'Enter' && settings.enterToSubmit && !e.shiftKey) {
+          if (!document.getElementById('memoModal').classList.contains('hidden-force')) {
+            e.preventDefault();
+            saveMemo();
+          } else if (!document.getElementById('folderModal').classList.contains('hidden-force')) {
+            e.preventDefault();
+            saveFolder();
+          }
+        }
+
         if (e.ctrlKey && e.key === 'ArrowLeft') {
           e.preventDefault();
           const current = appState.folders.find(f => f.id === currentFolderId);
@@ -1098,9 +1769,8 @@
       });
     }
 
-    // Boot
+    // Boot Application
     window.onload = init;
-
   </script>
 </body>
 </html>
