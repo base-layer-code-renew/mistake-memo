@@ -46,14 +46,9 @@
     }
 
     /* Dragging styles */
-    .folder-item.dragging {
+    .folder-item.dragging, .memo-item.dragging {
       opacity: 0.5;
       scale: 0.98;
-    }
-    .folder-item.drag-over {
-      border-color: #6366f1 !important;
-      background-color: rgba(99, 102, 241, 0.1) !important;
-      transform: scale(1.02);
     }
 
     /* Hidden element helper */
@@ -80,7 +75,13 @@
   <div id="toastContainer" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Context Menu -->
-  <div id="contextMenu" class="fixed z-[90] hidden-force pointer-events-auto flex-col gap-1 bg-gray-900 dark:bg-gray-800 p-1.5 rounded-2xl shadow-2xl border border-gray-700 ring-4 ring-black/10">
+  <div id="contextMenu" class="fixed z-[90] hidden-force pointer-events-auto flex-col gap-1 bg-gray-900 dark:bg-gray-800 p-1.5 rounded-2xl shadow-2xl border border-gray-700 ring-4 ring-black/10 min-w-[160px]">
+    <button id="contextAddCountBtn" class="hover:bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+      <i data-lucide="plus-circle" class="w-4 h-4"></i> +1 回追加
+    </button>
+    <button id="contextAddCustomCountBtn" class="hover:bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+      <i data-lucide="list-plus" class="w-4 h-4"></i> 指定数増やす
+    </button>
     <button id="contextEditBtn" class="hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
       <i data-lucide="edit-3" class="w-4 h-4"></i> 編集する
     </button>
@@ -137,7 +138,7 @@
         一括選択
       </button>
 
-      <button onclick="openModal('saveModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="ファイルに保存">
+      <button onclick="openModal('saveModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="データ保存">
         <i data-lucide="save" class="w-5 h-5"></i>
       </button>
       <button onclick="openModal('loadModal')" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors" title="データの読み込み">
@@ -174,7 +175,7 @@
     <!-- Memos Section -->
     <section>
       <h2 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 ml-1 flex items-center gap-2">
-        <i data-lucide="file-text" class="w-4 h-4"></i> メモ書き (間違えた問題)
+        <i data-lucide="file-text" class="w-4 h-4"></i> メモ書き (間違えた問題) <span class="text-xs font-normal opacity-70">(長押し移動で並び替え)</span>
       </h2>
       <div id="memosContainer" class="flex flex-wrap gap-3">
         <!-- Injected by JS -->
@@ -193,7 +194,8 @@
         <!-- Text Color Palette Toolbar -->
         <div class="flex items-center gap-2 p-1.5 bg-gray-100 dark:bg-gray-900 rounded-xl">
           <span class="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">文字色:</span>
-          <button type="button" onclick="formatText('foreColor', '#1f2937')" class="w-6 h-6 rounded-full bg-gray-800 border border-white shadow-sm" title="黒"></button>
+          <!-- Dynamic Primary Color Button (Black in Light mode, White in Dark mode) -->
+          <button id="primaryTextColorBtn" type="button" onclick="formatText('foreColor', settings.theme === 'dark' ? '#ffffff' : '#1f2937')" class="w-6 h-6 rounded-full bg-gray-800 dark:bg-white border border-gray-300 dark:border-gray-600 shadow-sm" title="標準色"></button>
           <button type="button" onclick="formatText('foreColor', '#ef4444')" class="w-6 h-6 rounded-full bg-red-500 border border-white shadow-sm" title="赤"></button>
           <button type="button" onclick="formatText('foreColor', '#3b82f6')" class="w-6 h-6 rounded-full bg-blue-500 border border-white shadow-sm" title="青"></button>
           <button type="button" onclick="formatText('foreColor', '#22c55e')" class="w-6 h-6 rounded-full bg-green-500 border border-white shadow-sm" title="緑"></button>
@@ -205,7 +207,7 @@
         <div id="memoInput" contenteditable="true" placeholder="間違えた問題の内容を入力..." class="rich-editor w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-y min-h-[120px]"></div>
 
         <!-- Attachment Tools -->
-        <div id="mediaAttachmentTools" class="hidden-force flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <div id="mediaAttachmentTools" class="flex items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
           <button onclick="document.getElementById('imageAttachmentInput').click()" type="button" class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 transition-colors">
             <i data-lucide="image" class="w-4 h-4"></i> 写真を追加
           </button>
@@ -237,7 +239,6 @@
         <button onclick="closeModal('drawModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div class="p-3 flex flex-col items-center gap-3">
-        <!-- Tools toolbar -->
         <div class="flex items-center gap-3 w-full justify-between">
           <div class="flex items-center gap-1">
             <button onclick="setPenColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-white shadow-sm"></button>
@@ -251,12 +252,11 @@
           </div>
           <button onclick="clearCanvas()" class="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-700 rounded-lg">全消去</button>
         </div>
-        <!-- Canvas Element -->
         <canvas id="paintCanvas" width="360" height="260" class="border rounded-xl bg-white touch-none cursor-crosshair w-full h-[260px] border-gray-300 dark:border-gray-600 shadow-inner"></canvas>
       </div>
       <div class="p-3 border-t border-gray-100 dark:border-gray-700 flex gap-3">
         <button onclick="closeModal('drawModal')" class="flex-1 py-2.5 rounded-xl font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
-        <button onclick="applyCanvasDrawing()" class="flex-1 py-2.5 text-white bg-indigo-600 rounded-xl font-medium">画像として添付</button>
+        <button onclick="applyCanvasDrawing()" class="flex-1 py-2.5 text-white bg-indigo-600 rounded-xl font-medium">添付する</button>
       </div>
     </div>
   </div>
@@ -273,6 +273,42 @@
         <div class="mt-6 flex gap-3">
           <button onclick="closeModal('folderModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">キャンセル</button>
           <button onclick="saveFolder()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">決定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Modal (Choose File or Direct Code) -->
+  <div id="loadModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
+      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">データの読み込み</h3>
+        <button onclick="closeModal('loadModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4 flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-3">
+          <button id="loadOptFileBtn" onclick="switchLoadOption('file')" class="p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm">
+            <i data-lucide="file-up" class="w-4 h-4"></i> ファイル選択
+          </button>
+          <button id="loadOptCodeBtn" onclick="switchLoadOption('code')" class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm">
+            <i data-lucide="code" class="w-4 h-4"></i> コード貼り付け
+          </button>
+        </div>
+
+        <div id="loadOptionFileView" class="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl gap-3">
+          <i data-lucide="upload-cloud" class="w-10 h-10 text-indigo-500"></i>
+          <p class="text-xs text-gray-500 dark:text-gray-400 text-center">JSON形式のセーブデータファイルを選択してください</p>
+          <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors">
+            ファイルを探す
+          </button>
+        </div>
+
+        <div id="loadOptionCodeView" class="hidden-force flex flex-col gap-3">
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">セーブデータコード</label>
+          <textarea id="loadCodeInputTextarea" placeholder="ここにセーブデータ（JSONコード）を貼り付けてください..." class="w-full h-32 px-3 py-2 text-xs font-mono border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none transition-all resize-none"></textarea>
+          <button onclick="executeLoadFromCode()" class="w-full py-3 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2">
+            ロードを実行する
+          </button>
         </div>
       </div>
     </div>
@@ -334,61 +370,39 @@
     </div>
   </div>
 
-  <!-- Save Modal -->
+  <!-- Save Modal (File or Copy Code) -->
   <div id="saveModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
-      <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-gray-100">ファイルに保存</h3>
-        <button onclick="closeModal('saveModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="p-4">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 ml-1">ファイル名</label>
-        <div class="flex items-center gap-2">
-          <input type="text" id="saveFileNameInput" value="mistake_notes" class="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-          <span class="text-gray-500 dark:text-gray-400 font-medium">.json</span>
-        </div>
-        <div class="mt-6 flex gap-3">
-          <button onclick="closeModal('saveModal')" class="flex-1 py-3 rounded-xl font-medium transition-colors bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">キャンセル</button>
-          <button onclick="executeSaveToFile()" class="flex-1 py-3 text-white bg-indigo-600 rounded-xl hover:bg-indigo-700 font-medium transition-colors">保存する</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Load Choice Modal -->
-  <div id="loadModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden-force items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-modal border border-gray-100 dark:border-gray-700">
       <div class="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-        <h3 class="font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
-          <i data-lucide="upload" class="w-5 h-5 text-indigo-500"></i> データ読み込み方法を選択
-        </h3>
-        <button onclick="closeModal('loadModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-gray-800 dark:text-gray-100">データの保存</h3>
+        <button onclick="closeModal('saveModal')" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
-      
       <div class="p-4 flex flex-col gap-4">
         <div class="grid grid-cols-2 gap-3">
-          <button id="loadOptFileBtn" onclick="switchLoadOption('file')" class="p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all">
-            <i data-lucide="file-up" class="w-6 h-6"></i>
-            <span class="text-xs sm:text-sm">ファイルから選択</span>
+          <button id="saveOptFileBtn" onclick="switchSaveOption('file')" class="p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm">
+            <i data-lucide="download" class="w-4 h-4"></i> ファイル保存
           </button>
-          <button id="loadOptCodeBtn" onclick="switchLoadOption('code')" class="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all">
-            <i data-lucide="code" class="w-6 h-6"></i>
-            <span class="text-xs sm:text-sm">コード直接入力</span>
+          <button id="saveOptCopyBtn" onclick="switchSaveOption('copy')" class="p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm">
+            <i data-lucide="copy" class="w-4 h-4"></i> コードのコピー
           </button>
         </div>
 
-        <div id="loadOptionFileView" class="p-6 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl flex flex-col items-center justify-center gap-3 bg-gray-50 dark:bg-gray-900/50">
-          <p class="text-sm text-gray-600 dark:text-gray-300 text-center">保存したJSONファイルを選択して読み込みます</p>
-          <button onclick="document.getElementById('fileInput').click()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-sm transition-colors shadow-md flex items-center gap-2">
-            <i data-lucide="folder-open" class="w-4 h-4"></i> ファイルを探す
+        <div id="saveOptionFileView" class="flex flex-col gap-3">
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">ファイル名</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="saveFileNameInput" value="mistake_notes" class="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            <span class="text-gray-500 dark:text-gray-400 font-medium text-sm">.json</span>
+          </div>
+          <button onclick="executeSaveToFile()" class="w-full py-3 mt-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i> ファイルとして保存
           </button>
         </div>
 
-        <div id="loadOptionCodeView" class="hidden-force flex flex-col gap-2">
-          <label class="text-xs font-bold text-gray-500 dark:text-gray-400">セーブデータ（JSONコード）を貼り付け:</label>
-          <textarea id="directCodeInput" placeholder='{"folders": [...], "memos": [...]}' class="w-full h-36 px-3 py-2 text-xs font-mono border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none"></textarea>
-          <button onclick="executeLoadFromCode()" class="w-full py-3 mt-1 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2">
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i> 貼り付けたコードでロード
+        <div id="saveOptionCopyView" class="hidden-force flex flex-col gap-3">
+          <label class="block text-xs font-medium text-gray-700 dark:text-gray-300">セーブデータコード（自動生成）</label>
+          <textarea id="saveCodePreviewTextarea" readonly class="w-full h-28 px-3 py-2 text-xs font-mono border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white rounded-xl focus:outline-none transition-all resize-none"></textarea>
+          <button onclick="executeCopySaveCode()" class="w-full py-3 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl font-bold text-sm transition-colors shadow-md flex items-center justify-center gap-2">
+            <i data-lucide="copy" class="w-4 h-4"></i> セーブデータをコピーする
           </button>
         </div>
       </div>
@@ -407,6 +421,11 @@
         <div>
           <h4 class="text-sm font-bold mb-3 text-gray-500 dark:text-gray-400">操作・動作設定</h4>
           <div class="space-y-3">
+            <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-pointer">
+              <span class="text-sm font-medium">「￥」キーで作成モーダル起動 (￥入力防止)</span>
+              <input type="checkbox" id="blockYenSymbolToggle" onchange="toggleSetting('blockYenSymbol')" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+            </label>
+
             <label class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 cursor-pointer">
               <span class="text-sm font-medium">Enterキーで追加 / 完了</span>
               <input type="checkbox" id="enterToSubmitToggle" onchange="toggleSetting('enterToSubmit')" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
@@ -490,19 +509,6 @@
       }[tag]));
     };
 
-    const COLOR_OPTIONS = [
-      { value: 'red', label: '赤色' },
-      { value: 'pink', label: 'ピンク色' },
-      { value: 'orange', label: 'オレンジ色' },
-      { value: 'yellow', label: '黄色' },
-      { value: 'green', label: '緑色' },
-      { value: 'teal', label: '青緑色' },
-      { value: 'blue', label: '青色' },
-      { value: 'indigo', label: '藍色' },
-      { value: 'purple', label: '紫色' },
-      { value: 'gray', label: '灰色' },
-    ];
-
     // --- Application State ---
     let appState = {
       folders: [{ id: 'root', name: 'すべてのノート', parentId: null }],
@@ -515,9 +521,10 @@
       enterToSubmit: true,
       batchIncludeFolders: true,
       enableMediaAttachments: true,
+      blockYenSymbol: true,
       colorRules: [
-        { id: 'r1', count: 3, color: 'red' },
-        { id: 'r2', count: 2, color: 'orange' }
+        { id: 'r1', count: 3, color: '#ef4444' },
+        { id: 'r2', count: 2, color: '#f97316' }
       ]
     };
     let settings = { ...defaultSettings };
@@ -526,32 +533,33 @@
     let pastHistory = [];
     let futureHistory = [];
 
-    // Selection Mode State
+    // Long press & Dragging state
+    let pointerTimer = null;
+    let dragStartCoords = { x: 0, y: 0 };
+    let longPressTriggeredPos = { x: 0, y: 0 };
+    let isLongPressed = false;
+    let draggedItemId = null;
+    let draggedItemType = null; // 'folder' | 'memo'
+    let isDraggingItem = false;
+    let contextMenuData = null;
+
+    // Batch Select state
     let isBatchMode = false;
     let selectedFolderIds = new Set();
     let selectedMemoIds = new Set();
-    let selectedTargetFolderForBatchMove = null;
 
-    // Editing context
-    let editingMemoId = null;
+    // Edit modal states
     let editingFolderId = null;
-    let currentImageAttachment = null; // Base64 string
+    let editingMemoId = null;
+    let attachedImageData = null;
+    let selectedBatchTargetFolderId = null;
+    let folderToDelete = null;
+    let folderToMove = null;
 
-    // Long press and drag logic
-    let pointerTimer = null;
-    let contextMenuData = null; // { type, id, x, y }
-    let folderToMove = null; 
-
-    let isLongPressed = false;
-    let isDraggingFolder = false;
-    let draggedFolderId = null;
-    let dragStartCoords = { x: 0, y: 0 };
-    let longPressTriggeredPos = { x: 0, y: 0 };
-
-    // Canvas State
+    // Canvas drawing state
+    let canvas, ctx;
     let isDrawing = false;
-    let penColor = '#000000';
-    let canvasCtx = null;
+    let currentPenColor = '#000000';
 
     // --- Initialize ---
     function init() {
@@ -574,7 +582,7 @@
       renderAll();
       setupEventListeners();
       setupCanvas();
-      lucide.createIcons();
+      if (window.lucide) lucide.createIcons();
     }
 
     function saveToStorage() {
@@ -587,90 +595,12 @@
       renderAll();
     }
 
-    function toggleSetting(key) {
-      settings[key] = !settings[key];
-      saveSettings();
-    }
-
-    function setTheme(theme) {
-      settings.theme = theme;
-      saveSettings();
-    }
-
-    function setFontSize(size) {
-      settings.fontSize = size;
-      saveSettings();
-    }
-
-    // --- History (Undo/Redo) ---
     function updateState(newState) {
       pastHistory.push(JSON.parse(JSON.stringify(appState)));
       appState = JSON.parse(JSON.stringify(newState));
       futureHistory = [];
       saveToStorage();
       renderAll();
-    }
-
-    function undo() {
-      if (pastHistory.length === 0) return;
-      const previous = pastHistory.pop();
-      futureHistory.push(JSON.parse(JSON.stringify(appState)));
-      appState = previous;
-      saveToStorage();
-      renderAll();
-    }
-
-    function redo() {
-      if (futureHistory.length === 0) return;
-      const next = futureHistory.pop();
-      pastHistory.push(JSON.parse(JSON.stringify(appState)));
-      appState = next;
-      saveToStorage();
-      renderAll();
-    }
-
-    // --- Rendering ---
-    function renderAll() {
-      renderBreadcrumbs();
-      renderFolders();
-      renderMemos();
-      updateButtons();
-      renderSettingsModal();
-      updateMediaAttachmentUI();
-      lucide.createIcons();
-    }
-
-    function updateButtons() {
-      document.getElementById('undoBtn').disabled = pastHistory.length === 0;
-      document.getElementById('redoBtn').disabled = futureHistory.length === 0;
-
-      const normalTb = document.getElementById('normalToolbar');
-      const batchTb = document.getElementById('batchToolbar');
-      const batchBtn = document.getElementById('batchToggleBtn');
-      const folderHint = document.getElementById('folderBatchHint');
-
-      if (isBatchMode) {
-        normalTb.classList.add('hidden-force');
-        batchTb.classList.remove('hidden-force');
-        batchTb.classList.add('flex');
-        batchBtn.classList.add('bg-indigo-600', 'text-white');
-        batchBtn.classList.remove('border', 'text-indigo-600');
-        batchBtn.textContent = `選択完了 (${selectedFolderIds.size + selectedMemoIds.size})`;
-
-        if (settings.batchIncludeFolders) {
-          folderHint.classList.remove('hidden-force');
-        } else {
-          folderHint.classList.add('hidden-force');
-        }
-      } else {
-        normalTb.classList.remove('hidden-force');
-        batchTb.classList.add('hidden-force');
-        batchTb.classList.remove('flex');
-        batchBtn.classList.remove('bg-indigo-600', 'text-white');
-        batchBtn.classList.add('border', 'text-indigo-600');
-        batchBtn.textContent = '一括選択';
-        folderHint.classList.add('hidden-force');
-      }
     }
 
     function applyTheme() {
@@ -681,17 +611,26 @@
       }
     }
 
-    function updateMediaAttachmentUI() {
-      const tools = document.getElementById('mediaAttachmentTools');
-      if (settings.enableMediaAttachments) {
-        tools.classList.remove('hidden-force');
-      } else {
-        tools.classList.add('hidden-force');
-      }
+    // --- Rendering Functions ---
+    function renderAll() {
+      renderBreadcrumbs();
+      renderFolders();
+      renderMemos();
+      updateButtons();
+      renderSettingsModal();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateButtons() {
+      const undoBtn = document.getElementById('undoBtn');
+      const redoBtn = document.getElementById('redoBtn');
+      if (undoBtn) undoBtn.disabled = pastHistory.length === 0;
+      if (redoBtn) redoBtn.disabled = futureHistory.length === 0;
     }
 
     function renderBreadcrumbs() {
       const container = document.getElementById('breadcrumbs');
+      if (!container) return;
       const crumbs = [];
       let currId = currentFolderId;
       
@@ -720,6 +659,7 @@
 
     function renderFolders() {
       const container = document.getElementById('foldersContainer');
+      if (!container) return;
       const childFolders = appState.folders.filter(f => f.parentId === currentFolderId);
       
       if (childFolders.length === 0) {
@@ -729,20 +669,19 @@
 
       container.innerHTML = '';
       childFolders.forEach(folder => {
-        const div = document.createElement('div');
         const isSelected = selectedFolderIds.has(folder.id);
-        
-        div.className = `folder-item bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border ${isSelected ? 'border-indigo-600 ring-2 ring-indigo-500/30' : 'border-gray-100 dark:border-gray-700'} hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer flex items-center justify-between group transition-all select-none`;
+        const div = document.createElement('div');
+        div.className = `folder-item bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border ${isSelected ? 'ring-2 ring-indigo-500 border-indigo-600' : 'border-gray-100 dark:border-gray-700'} hover:border-indigo-300 dark:hover:border-indigo-500 cursor-pointer flex items-center justify-between group transition-all select-none`;
         div.dataset.folderId = folder.id;
-
+        
         div.addEventListener('pointerdown', (e) => onFolderPointerDown(e, folder.id));
         div.addEventListener('pointermove', (e) => onFolderPointerMove(e, folder.id));
         div.addEventListener('pointerup', (e) => onFolderPointerUp(e, folder.id));
-        div.addEventListener('pointercancel', (e) => onFolderPointerCancel(e));
+        div.addEventListener('pointercancel', () => cleanupItemDragState());
         div.addEventListener('contextmenu', e => e.preventDefault());
 
         const selectIcon = (isBatchMode && settings.batchIncludeFolders) ? `
-          <div class="w-5 h-5 rounded-md border flex items-center justify-center ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
+          <div class="w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
             ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
           </div>
         ` : '';
@@ -760,54 +699,126 @@
       });
     }
 
-    // --- Folder Pointer / Drag & Drop / Long Press ---
+    // --- Dynamic Color Styles for Memos ---
+    function getColorClasses(count) {
+      const sortedRules = [...settings.colorRules].sort((a, b) => b.count - a.count);
+      const matchedRule = sortedRules.find(rule => count >= rule.count);
+      const color = matchedRule ? matchedRule.color : null;
+      const isDark = settings.theme === 'dark';
+
+      if (!color) {
+        return {
+          boxStyle: isDark ? 'background-color: rgba(31, 41, 55, 0.8); border-color: #374151; color: #f3f4f6;' : 'background-color: #ffffff; border-color: #f3f4f6; color: #1f2937;',
+          badgeStyle: isDark ? 'background-color: #374151; color: #d1d5db;' : 'background-color: #f3f4f6; color: #4b5563;'
+        };
+      }
+
+      return {
+        boxStyle: isDark ? `background-color: ${color}20; border-color: ${color}60; color: #f9fafb;` : `background-color: ${color}15; border-color: ${color}40; color: #111827;`,
+        badgeStyle: `background-color: ${color}; color: #ffffff;`
+      };
+    }
+
+    function renderMemos() {
+      const container = document.getElementById('memosContainer');
+      if (!container) return;
+      const memos = appState.memos
+        .filter(m => m.folderId === currentFolderId);
+
+      if (memos.length === 0) {
+        container.innerHTML = `<p class="text-gray-400 text-sm ml-2">メモはありません</p>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      memos.forEach(memo => {
+        const isSelected = selectedMemoIds.has(memo.id);
+        const colors = getColorClasses(memo.count);
+        const div = document.createElement('div');
+        
+        const fontSizeClass = settings.fontSize === 'small' ? 'text-xs md:text-sm' : 
+                              settings.fontSize === 'large' ? 'text-base md:text-xl' : 
+                              'text-sm md:text-base';
+
+        div.className = `memo-item relative flex-auto min-w-[200px] max-w-full p-4 rounded-xl border transition-all flex flex-col justify-between gap-3 group select-none cursor-pointer shadow-sm ${isSelected ? 'ring-2 ring-indigo-500 border-indigo-600' : ''}`;
+        div.style = colors.boxStyle;
+        div.dataset.memoId = memo.id;
+        
+        div.addEventListener('pointerdown', (e) => onMemoPointerDown(e, memo.id));
+        div.addEventListener('pointermove', (e) => onMemoPointerMove(e, memo.id));
+        div.addEventListener('pointerup', (e) => onMemoPointerUp(e, memo.id));
+        div.addEventListener('pointercancel', () => cleanupItemDragState());
+        div.addEventListener('contextmenu', e => e.preventDefault());
+
+        const selectIcon = isBatchMode ? `
+          <div class="w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
+            ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+          </div>
+        ` : '';
+
+        const imageHTML = memo.imageUrl ? `<img src="${memo.imageUrl}" class="mt-2 max-h-36 rounded-lg object-contain bg-black/5 border border-black/10">` : '';
+
+        div.innerHTML = `
+          <div class="flex items-start justify-between gap-3 w-full pointer-events-none">
+            <div class="flex items-start gap-2 flex-1">
+              ${selectIcon}
+              <div class="whitespace-pre-wrap break-words flex-1 leading-relaxed ${fontSizeClass}">
+                ${memo.html || escapeHTML(memo.text)}
+              </div>
+            </div>
+            <div class="flex flex-col items-end gap-2 flex-shrink-0">
+              <div class="flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm shadow-sm" style="${colors.badgeStyle}">
+                × ${memo.count}
+              </div>
+            </div>
+          </div>
+          ${imageHTML}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function changeFolder(id) {
+      currentFolderId = id;
+      renderAll();
+    }
+
+    // --- Pointer Interactions for Drag/Long Press ---
     function onFolderPointerDown(e, folderId) {
       if (e.button !== 0 && e.button !== undefined) return;
-      hideContextMenu();
+      if (isBatchMode) return;
 
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
-
-      dragStartCoords = { x, y };
-      draggedFolderId = folderId;
+      dragStartCoords = { x: e.clientX, y: e.clientY };
+      draggedItemId = folderId;
+      draggedItemType = 'folder';
       isLongPressed = false;
-      isDraggingFolder = false;
+      isDraggingItem = false;
 
       pointerTimer = setTimeout(() => {
         isLongPressed = true;
-        longPressTriggeredPos = { x, y };
+        longPressTriggeredPos = { x: e.clientX, y: e.clientY };
         if (navigator.vibrate) navigator.vibrate(50);
       }, 500);
     }
 
     function onFolderPointerMove(e, folderId) {
-      if (!draggedFolderId) return;
+      if (!draggedItemId || draggedItemType !== 'folder') return;
+      const dist = Math.hypot(e.clientX - dragStartCoords.x, e.clientY - dragStartCoords.y);
 
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
-      const dist = Math.hypot(x - dragStartCoords.x, y - dragStartCoords.y);
-
-      if (!isLongPressed && dist > 10) {
-        if (pointerTimer) {
-          clearTimeout(pointerTimer);
-          pointerTimer = null;
-        }
-        return;
+      if (dist > 10 && pointerTimer && !isLongPressed) {
+        clearTimeout(pointerTimer);
+        pointerTimer = null;
       }
 
-      if (isLongPressed && dist > 8 && !isBatchMode) {
-        if (!isDraggingFolder) {
-          isDraggingFolder = true;
-          const draggedElem = document.querySelector(`.folder-item[data-folder-id="${draggedFolderId}"]`);
-          if (draggedElem) draggedElem.classList.add('dragging');
-        }
-
-        const elemBelow = document.elementFromPoint(x, y);
-        const folderElemBelow = elemBelow ? elemBelow.closest('.folder-item') : null;
-
-        document.querySelectorAll('.folder-item').forEach(el => el.classList.remove('drag-over'));
-        if (folderElemBelow && folderElemBelow.dataset.folderId !== draggedFolderId) {
-          folderElemBelow.classList.add('drag-over');
+      if (isLongPressed) {
+        const dragDist = Math.hypot(e.clientX - longPressTriggeredPos.x, e.clientY - longPressTriggeredPos.y);
+        if (dragDist > 15) {
+          isDraggingItem = true;
+          const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.folder-item');
+          if (target && target.dataset.folderId && target.dataset.folderId !== folderId) {
+            swapFolders(folderId, target.dataset.folderId);
+            longPressTriggeredPos = { x: e.clientX, y: e.clientY };
+          }
         }
       }
     }
@@ -818,55 +829,82 @@
         pointerTimer = null;
       }
 
-      const x = e.clientX || (e.changedTouches && e.changedTouches[0].clientX) || dragStartCoords.x;
-      const y = e.clientY || (e.changedTouches && e.changedTouches[0].clientY) || dragStartCoords.y;
-
-      if (isDraggingFolder) {
-        const elemBelow = document.elementFromPoint(x, y);
-        const folderElemBelow = elemBelow ? elemBelow.closest('.folder-item') : null;
-
-        if (folderElemBelow && folderElemBelow.dataset.folderId !== draggedFolderId) {
-          const targetId = folderElemBelow.dataset.folderId;
-          swapFolders(draggedFolderId, targetId);
-          showToast('フォルダの位置を入れ替えました');
-        }
-      } else if (isLongPressed) {
-        if (isBatchMode) {
-          toggleFolderSelection(folderId);
-        } else {
-          contextMenuData = { type: 'folder', id: folderId, x: longPressTriggeredPos.x, y: longPressTriggeredPos.y };
-          showContextMenu();
-        }
-      } else {
-        if (isBatchMode) {
-          if (settings.batchIncludeFolders) {
-            toggleFolderSelection(folderId);
-          } else {
-            changeFolder(folderId);
-          }
-        } else if (!contextMenuData) {
-          changeFolder(folderId);
-        }
+      if (isBatchMode) {
+        if (settings.batchIncludeFolders) toggleFolderSelection(folderId);
+        cleanupItemDragState();
+        return;
       }
 
-      cleanupFolderDragState();
+      if (isLongPressed && !isDraggingItem) {
+        contextMenuData = { type: 'folder', id: folderId, x: e.clientX, y: e.clientY };
+        showContextMenu();
+      } else if (!isLongPressed && !isDraggingItem) {
+        changeFolder(folderId);
+      }
+
+      cleanupItemDragState();
     }
 
-    function onFolderPointerCancel(e) {
+    function onMemoPointerDown(e, memoId) {
+      if (e.button !== 0 && e.button !== undefined) return;
+      if (isBatchMode) return;
+
+      dragStartCoords = { x: e.clientX, y: e.clientY };
+      draggedItemId = memoId;
+      draggedItemType = 'memo';
+      isLongPressed = false;
+      isDraggingItem = false;
+
+      pointerTimer = setTimeout(() => {
+        isLongPressed = true;
+        longPressTriggeredPos = { x: e.clientX, y: e.clientY };
+        if (navigator.vibrate) navigator.vibrate(50);
+      }, 500);
+    }
+
+    function onMemoPointerMove(e, memoId) {
+      if (!draggedItemId || draggedItemType !== 'memo') return;
+      const dist = Math.hypot(e.clientX - dragStartCoords.x, e.clientY - dragStartCoords.y);
+
+      if (dist > 10 && pointerTimer && !isLongPressed) {
+        clearTimeout(pointerTimer);
+        pointerTimer = null;
+      }
+
+      if (isLongPressed) {
+        const dragDist = Math.hypot(e.clientX - longPressTriggeredPos.x, e.clientY - longPressTriggeredPos.y);
+        if (dragDist > 15) {
+          isDraggingItem = true;
+          const target = document.elementFromPoint(e.clientX, e.clientY)?.closest('.memo-item');
+          if (target && target.dataset.memoId && target.dataset.memoId !== memoId) {
+            swapMemos(memoId, target.dataset.memoId);
+            longPressTriggeredPos = { x: e.clientX, y: e.clientY };
+          }
+        }
+      }
+    }
+
+    function onMemoPointerUp(e, memoId) {
       if (pointerTimer) {
         clearTimeout(pointerTimer);
         pointerTimer = null;
       }
-      cleanupFolderDragState();
-    }
 
-    function cleanupFolderDragState() {
-      document.querySelectorAll('.folder-item').forEach(el => {
-        el.classList.remove('dragging', 'drag-over');
-      });
-      isLongPressed = false;
-      isDraggingFolder = false;
-      draggedFolderId = null;
+      if (isBatchMode) {
+        toggleMemoSelection(memoId);
+        cleanupItemDragState();
+        return;
+      }
+
+      if (isLongPressed && !isDraggingItem) {
+        contextMenuData = { type: 'memo', id: memoId, x: e.clientX, y: e.clientY };
+        showContextMenu();
+      } else if (!isLongPressed && !isDraggingItem) {
+        const memo = appState.memos.find(m => m.id === memoId);
+        if (memo) copyToClipboard(memo.text);
+      }
+
+      cleanupItemDragState();
     }
 
     function swapFolders(id1, id2) {
@@ -882,206 +920,468 @@
       }
     }
 
-    // Color mapper for Memos
-    function getColorClasses(count) {
-      const sortedRules = [...settings.colorRules].sort((a, b) => b.count - a.count);
-      const matchedRule = sortedRules.find(rule => count >= rule.count);
-      const base = matchedRule ? matchedRule.color : 'default';
-      const isDark = settings.theme === 'dark';
+    function swapMemos(id1, id2) {
+      const idx1 = appState.memos.findIndex(m => m.id === id1);
+      const idx2 = appState.memos.findIndex(m => m.id === id2);
 
-      const map = {
-        red: {
-          light: 'bg-red-50 border-red-200 text-red-800', badgeLight: 'bg-red-500 text-white',
-          dark: 'bg-red-900/20 border-red-800/50 text-red-200', badgeDark: 'bg-red-900 text-red-200 border border-red-700'
-        },
-        pink: {
-          light: 'bg-pink-50 border-pink-200 text-pink-800', badgeLight: 'bg-pink-500 text-white',
-          dark: 'bg-pink-900/20 border-pink-800/50 text-pink-200', badgeDark: 'bg-pink-900 text-pink-200 border border-pink-700'
-        },
-        orange: {
-          light: 'bg-orange-50 border-orange-200 text-orange-800', badgeLight: 'bg-orange-500 text-white',
-          dark: 'bg-orange-900/20 border-orange-800/50 text-orange-200', badgeDark: 'bg-orange-900 text-orange-200 border border-orange-700'
-        },
-        yellow: {
-          light: 'bg-yellow-50 border-yellow-200 text-yellow-900', badgeLight: 'bg-yellow-500 text-gray-900',
-          dark: 'bg-yellow-900/20 border-yellow-800/50 text-yellow-200', badgeDark: 'bg-yellow-900 text-yellow-200 border border-yellow-700'
-        },
-        green: {
-          light: 'bg-green-50 border-green-200 text-green-800', badgeLight: 'bg-green-500 text-white',
-          dark: 'bg-green-900/20 border-green-800/50 text-green-200', badgeDark: 'bg-green-900 text-green-200 border border-green-700'
-        },
-        teal: {
-          light: 'bg-teal-50 border-teal-200 text-teal-800', badgeLight: 'bg-teal-500 text-white',
-          dark: 'bg-teal-900/20 border-teal-800/50 text-teal-200', badgeDark: 'bg-teal-900 text-teal-200 border border-teal-700'
-        },
-        blue: {
-          light: 'bg-blue-50 border-blue-200 text-blue-800', badgeLight: 'bg-blue-500 text-white',
-          dark: 'bg-blue-900/20 border-blue-800/50 text-blue-200', badgeDark: 'bg-blue-900 text-blue-200 border border-blue-700'
-        },
-        indigo: {
-          light: 'bg-indigo-50 border-indigo-200 text-indigo-800', badgeLight: 'bg-indigo-500 text-white',
-          dark: 'bg-indigo-900/20 border-indigo-800/50 text-indigo-200', badgeDark: 'bg-indigo-900 text-indigo-200 border border-indigo-700'
-        },
-        purple: {
-          light: 'bg-purple-50 border-purple-200 text-purple-800', badgeLight: 'bg-purple-500 text-white',
-          dark: 'bg-purple-900/20 border-purple-800/50 text-purple-200', badgeDark: 'bg-purple-900 text-purple-200 border border-purple-700'
-        },
-        gray: {
-          light: 'bg-gray-50 border-gray-300 text-gray-800', badgeLight: 'bg-gray-500 text-white',
-          dark: 'bg-gray-800/50 border-gray-600 text-gray-300', badgeDark: 'bg-gray-700 text-gray-300 border border-gray-600'
-        },
-        default: {
-          light: 'bg-white border-gray-100 text-gray-800', badgeLight: 'bg-gray-100 text-gray-600',
-          dark: 'bg-gray-800 border-gray-700 text-gray-200', badgeDark: 'bg-gray-700 text-gray-300'
-        }
-      };
-
-      const c = map[base] || map.default;
-      return {
-        box: isDark ? c.dark : c.light,
-        badge: isDark ? c.badgeDark : c.badgeLight
-      };
+      if (idx1 !== -1 && idx2 !== -1) {
+        const newState = { ...appState, memos: [...appState.memos] };
+        const temp = newState.memos[idx1];
+        newState.memos[idx1] = newState.memos[idx2];
+        newState.memos[idx2] = temp;
+        updateState(newState);
+      }
     }
 
-    function renderMemos() {
-      const container = document.getElementById('memosContainer');
-      const memos = appState.memos
-        .filter(m => m.folderId === currentFolderId)
-        .sort((a, b) => b.count - a.count);
+    function cleanupItemDragState() {
+      if (pointerTimer) clearTimeout(pointerTimer);
+      pointerTimer = null;
+      draggedItemId = null;
+      draggedItemType = null;
+      isLongPressed = false;
+      isDraggingItem = false;
+    }
 
-      if (memos.length === 0) {
-        container.innerHTML = `<p class="text-gray-400 text-sm ml-2">メモはありません</p>`;
-        return;
+    // --- Context Menu Actions ---
+    function showContextMenu() {
+      if (!contextMenuData) return;
+      const menu = document.getElementById('contextMenu');
+      const addCountBtn = document.getElementById('contextAddCountBtn');
+      const addCustomCountBtn = document.getElementById('contextAddCustomCountBtn');
+      const moveBtn = document.getElementById('contextMoveBtn');
+      if (!menu) return;
+
+      if (contextMenuData.type === 'memo') {
+        if (addCountBtn) addCountBtn.classList.remove('hidden-force');
+        if (addCustomCountBtn) addCustomCountBtn.classList.remove('hidden-force');
+        if (moveBtn) moveBtn.classList.add('hidden-force');
+      } else {
+        if (addCountBtn) addCountBtn.classList.add('hidden-force');
+        if (addCustomCountBtn) addCustomCountBtn.classList.add('hidden-force');
+        if (moveBtn) moveBtn.classList.remove('hidden-force');
       }
 
-      container.innerHTML = '';
-      memos.forEach(memo => {
-        const colors = getColorClasses(memo.count);
-        const isSelected = selectedMemoIds.has(memo.id);
-        const div = document.createElement('div');
-        div.className = `relative flex-auto min-w-[200px] max-w-full p-4 rounded-xl border transition-all flex items-start justify-between gap-4 group select-none cursor-pointer shadow-sm ${isSelected ? 'border-indigo-600 ring-2 ring-indigo-500/30' : colors.box}`;
-        
-        div.addEventListener('pointerdown', (e) => onMemoPointerDown(e, 'memo', memo.id));
-        div.addEventListener('pointerup', onMemoPointerUpOrMove);
-        div.addEventListener('pointermove', onMemoPointerUpOrMove);
-        div.addEventListener('pointercancel', onMemoPointerUpOrMove);
-        div.addEventListener('contextmenu', e => e.preventDefault());
-        
-        div.addEventListener('click', () => {
-          if (isBatchMode) {
-            toggleMemoSelection(memo.id);
-          } else if (!contextMenuData) {
-            copyToClipboard(memo.text);
-          }
-        });
+      menu.classList.remove('hidden-force');
+      menu.classList.add('flex');
 
-        const fontSizeClass = settings.fontSize === 'small' ? 'text-xs md:text-sm' : 
-                              settings.fontSize === 'large' ? 'text-base md:text-xl' : 
-                              'text-sm md:text-base';
+      let left = contextMenuData.x + 10;
+      let top = Math.max(contextMenuData.y - 50, 10);
+      if (left + 170 > window.innerWidth) left = window.innerWidth - 180;
 
-        const selectIcon = isBatchMode ? `
-          <div class="w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-gray-600'}">
-            ${isSelected ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
-          </div>
-        ` : '';
-
-        const attachedImgHTML = memo.imageUrl ? `
-          <div class="mt-2">
-            <img src="${memo.imageUrl}" class="max-h-40 rounded-lg border border-black/10 dark:border-white/10 object-contain">
-          </div>
-        ` : '';
-
-        div.innerHTML = `
-          <div class="flex gap-3 w-full items-start">
-            ${selectIcon}
-            <div class="flex-1 overflow-hidden">
-              <div class="whitespace-pre-wrap break-words leading-relaxed pointer-events-none ${fontSizeClass}">
-                ${memo.html || escapeHTML(memo.text)}
-              </div>
-              ${attachedImgHTML}
-            </div>
-            <div class="flex flex-col items-end gap-2 shrink-0 pointer-events-none">
-              <div class="flex items-center justify-center px-3 py-1 rounded-full font-bold text-sm ${colors.badge}">
-                × ${memo.count}
-              </div>
-            </div>
-          </div>
-        `;
-        container.appendChild(div);
-      });
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
     }
 
-    function onMemoPointerDown(e, type, id) {
-      if (e.button !== 0 && e.button !== undefined) return;
+    function hideContextMenu() {
+      const menu = document.getElementById('contextMenu');
+      if (menu) menu.classList.add('hidden-force');
+      setTimeout(() => { contextMenuData = null; }, 50);
+    }
+
+    function incrementMemoCount(amount) {
+      if (!contextMenuData || contextMenuData.type !== 'memo') return;
+      const memoId = contextMenuData.id;
       hideContextMenu();
-      
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
 
-      pointerTimer = setTimeout(() => {
-        if (isBatchMode) {
-          toggleMemoSelection(id);
-        } else {
-          contextMenuData = { type, id, x, y };
-          if (navigator.vibrate) navigator.vibrate(50);
-          showContextMenu();
-        }
-      }, 600);
+      const newState = {
+        ...appState,
+        memos: appState.memos.map(m => m.id === memoId ? { ...m, count: m.count + amount } : m)
+      };
+      updateState(newState);
+      showToast(`カウントを +${amount} しました`);
     }
 
-    function onMemoPointerUpOrMove() {
-      if (pointerTimer) {
-        clearTimeout(pointerTimer);
-        pointerTimer = null;
+    function promptCustomIncrement() {
+      if (!contextMenuData || contextMenuData.type !== 'memo') return;
+      const memoId = contextMenuData.id;
+      hideContextMenu();
+
+      const val = prompt("増やしたい回数を入力してください:", "1");
+      const num = parseInt(val, 10);
+      if (!isNaN(num) && num > 0) {
+        const newState = {
+          ...appState,
+          memos: appState.memos.map(m => m.id === memoId ? { ...m, count: m.count + num } : m)
+        };
+        updateState(newState);
+        showToast(`カウントを +${num} しました`);
       }
     }
 
-    // --- Multi-Select Batch Operations ---
+    // --- Single Folder/Memo Creation and Saving ---
+    function saveFolder() {
+      const input = document.getElementById('folderInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      if (editingFolderId) {
+        const newState = {
+          ...appState,
+          folders: appState.folders.map(f => f.id === editingFolderId ? { ...f, name } : f)
+        };
+        updateState(newState);
+        editingFolderId = null;
+      } else {
+        const newState = { ...appState, folders: [...appState.folders] };
+        newState.folders.push({
+          id: generateId(),
+          name,
+          parentId: currentFolderId
+        });
+        updateState(newState);
+      }
+
+      input.value = '';
+      closeModal('folderModal');
+    }
+
+    function saveMemo() {
+      const input = document.getElementById('memoInput');
+      const html = input.innerHTML.trim();
+      const text = input.innerText.trim();
+      if (!text && !html && !attachedImageData) return;
+
+      if (editingMemoId) {
+        const newState = {
+          ...appState,
+          memos: appState.memos.map(m => m.id === editingMemoId ? {
+            ...m, text, html, imageUrl: attachedImageData
+          } : m)
+        };
+        updateState(newState);
+        editingMemoId = null;
+      } else {
+        const newState = { ...appState, memos: [...appState.memos] };
+        const existingIndex = newState.memos.findIndex(m => m.folderId === currentFolderId && m.text === text && !m.imageUrl);
+
+        if (existingIndex >= 0 && !attachedImageData) {
+          newState.memos[existingIndex] = {
+            ...newState.memos[existingIndex],
+            count: newState.memos[existingIndex].count + 1,
+            html
+          };
+        } else {
+          newState.memos.push({
+            id: generateId(),
+            text,
+            html,
+            imageUrl: attachedImageData,
+            count: 1,
+            folderId: currentFolderId
+          });
+        }
+        updateState(newState);
+      }
+
+      input.innerHTML = '';
+      attachedImageData = null;
+      document.getElementById('attachedImagePreview').classList.add('hidden-force');
+      closeModal('memoModal');
+    }
+
+    function formatText(command, value = null) {
+      document.execCommand(command, false, value);
+    }
+
+    // --- Batch Selection Toggle ---
     function toggleBatchMode() {
       isBatchMode = !isBatchMode;
       selectedFolderIds.clear();
       selectedMemoIds.clear();
-      renderAll();
-    }
 
-    function toggleFolderSelection(id) {
-      if (selectedFolderIds.has(id)) selectedFolderIds.delete(id);
-      else selectedFolderIds.add(id);
+      const batchBtn = document.getElementById('batchToggleBtn');
+      const normalBar = document.getElementById('normalToolbar');
+      const batchBar = document.getElementById('batchToolbar');
+      const folderHint = document.getElementById('folderBatchHint');
+
+      if (isBatchMode) {
+        batchBtn.classList.add('bg-indigo-600', 'text-white');
+        normalBar.classList.add('hidden-force');
+        batchBar.classList.remove('hidden-force');
+        batchBar.classList.add('flex');
+        if (settings.batchIncludeFolders) folderHint.classList.remove('hidden-force');
+      } else {
+        batchBtn.classList.remove('bg-indigo-600', 'text-white');
+        normalBar.classList.remove('hidden-force');
+        batchBar.classList.add('hidden-force');
+        batchBar.classList.remove('flex');
+        folderHint.classList.add('hidden-force');
+      }
+
       renderAll();
     }
 
     function toggleMemoSelection(id) {
       if (selectedMemoIds.has(id)) selectedMemoIds.delete(id);
       else selectedMemoIds.add(id);
-      renderAll();
+      renderMemos();
+    }
+
+    function toggleFolderSelection(id) {
+      if (selectedFolderIds.has(id)) selectedFolderIds.delete(id);
+      else selectedFolderIds.add(id);
+      renderFolders();
     }
 
     function toggleSelectAll() {
-      const childFolders = appState.folders.filter(f => f.parentId === currentFolderId);
-      const childMemos = appState.memos.filter(m => m.folderId === currentFolderId);
+      const currentMemos = appState.memos.filter(m => m.folderId === currentFolderId);
+      const currentFolders = appState.folders.filter(f => f.parentId === currentFolderId);
 
-      const allFoldersSelected = settings.batchIncludeFolders && childFolders.every(f => selectedFolderIds.has(f.id));
-      const allMemosSelected = childMemos.every(m => selectedMemoIds.has(m.id));
+      const allMemosSelected = currentMemos.every(m => selectedMemoIds.has(m.id));
 
-      if (allFoldersSelected && allMemosSelected) {
-        selectedFolderIds.clear();
-        selectedMemoIds.clear();
+      if (allMemosSelected) {
+        currentMemos.forEach(m => selectedMemoIds.delete(m.id));
+        if (settings.batchIncludeFolders) currentFolders.forEach(f => selectedFolderIds.delete(f.id));
       } else {
-        if (settings.batchIncludeFolders) {
-          childFolders.forEach(f => selectedFolderIds.add(f.id));
-        }
-        childMemos.forEach(m => selectedMemoIds.add(m.id));
+        currentMemos.forEach(m => selectedMemoIds.add(m.id));
+        if (settings.batchIncludeFolders) currentFolders.forEach(f => selectedFolderIds.add(f.id));
       }
-      renderAll();
+
+      renderFolders();
+      renderMemos();
+    }
+
+    // --- Save Options ---
+    function switchSaveOption(opt) {
+      const fileBtn = document.getElementById('saveOptFileBtn');
+      const copyBtn = document.getElementById('saveOptCopyBtn');
+      const fileView = document.getElementById('saveOptionFileView');
+      const copyView = document.getElementById('saveOptionCopyView');
+
+      if (!fileBtn || !copyBtn) return;
+
+      if (opt === 'file') {
+        fileBtn.className = "p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        copyBtn.className = "p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        fileView.classList.remove('hidden-force');
+        copyView.classList.add('hidden-force');
+      } else {
+        copyBtn.className = "p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        fileBtn.className = "p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        copyView.classList.remove('hidden-force');
+        fileView.classList.add('hidden-force');
+
+        const exportData = { ...appState, settings };
+        document.getElementById('saveCodePreviewTextarea').value = JSON.stringify(exportData, null, 2);
+      }
+    }
+
+    function executeSaveToFile() {
+      const nameInput = document.getElementById('saveFileNameInput').value.trim();
+      const fileName = nameInput ? `${nameInput}.json` : 'mistake_notes.json';
+      const exportData = { ...appState, settings };
+      const jsonString = JSON.stringify(exportData, null, 2);
+
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("ファイルに保存しました");
+      closeModal('saveModal');
+    }
+
+    function executeCopySaveCode() {
+      const exportData = { ...appState, settings };
+      copyToClipboard(JSON.stringify(exportData));
+      closeModal('saveModal');
+    }
+
+    // --- Load Options ---
+    function switchLoadOption(opt) {
+      const fileBtn = document.getElementById('loadOptFileBtn');
+      const codeBtn = document.getElementById('loadOptCodeBtn');
+      const fileView = document.getElementById('loadOptionFileView');
+      const codeView = document.getElementById('loadOptionCodeView');
+
+      if (!fileBtn || !codeBtn) return;
+
+      if (opt === 'file') {
+        fileBtn.className = "p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        codeBtn.className = "p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        fileView.classList.remove('hidden-force');
+        codeView.classList.add('hidden-force');
+      } else {
+        codeBtn.className = "p-3 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        fileBtn.className = "p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex items-center justify-center gap-2 transition-all text-xs sm:text-sm";
+        codeView.classList.remove('hidden-force');
+        fileView.classList.add('hidden-force');
+      }
+    }
+
+    function executeLoadFromCode() {
+      const codeText = document.getElementById('loadCodeInputTextarea').value.trim();
+      if (!codeText) return;
+      try {
+        const parsed = JSON.parse(codeText);
+        if (parsed.folders && parsed.memos) {
+          appState = { folders: parsed.folders, memos: parsed.memos };
+          if (parsed.settings) settings = { ...defaultSettings, ...parsed.settings };
+          saveToStorage();
+          currentFolderId = 'root';
+          renderAll();
+          showToast("コードからデータを読み込みました");
+          closeModal('loadModal');
+        } else {
+          showToast("無効なデータ形式です");
+        }
+      } catch (err) {
+        showToast("JSONの読み込みに失敗しました");
+      }
+    }
+
+    // --- Settings Modal & Toggles ---
+    function renderSettingsModal() {
+      const isDark = settings.theme === 'dark';
+      
+      const blockYen = document.getElementById('blockYenSymbolToggle');
+      if (blockYen) blockYen.checked = settings.blockYenSymbol !== false;
+
+      const enterToSubmit = document.getElementById('enterToSubmitToggle');
+      if (enterToSubmit) enterToSubmit.checked = settings.enterToSubmit !== false;
+
+      const batchFolders = document.getElementById('batchIncludeFoldersToggle');
+      if (batchFolders) batchFolders.checked = settings.batchIncludeFolders !== false;
+
+      const mediaAttachments = document.getElementById('enableMediaAttachmentsToggle');
+      if (mediaAttachments) mediaAttachments.checked = settings.enableMediaAttachments !== false;
+
+      const lightBtn = document.getElementById('theme-light-btn');
+      const darkBtn = document.getElementById('theme-dark-btn');
+      if (lightBtn && darkBtn) {
+        lightBtn.className = `flex-1 py-2 rounded-lg border font-medium ${!isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+        darkBtn.className = `flex-1 py-2 rounded-lg border font-medium ${isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+      }
+
+      ['small', 'medium', 'large'].forEach(size => {
+        const btn = document.getElementById(`font-${size}-btn`);
+        if (btn) {
+          const active = settings.fontSize === size;
+          btn.className = `flex-1 py-2 rounded-lg border font-medium ${active ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
+        }
+      });
+
+      const container = document.getElementById('colorRulesContainer');
+      if (!container) return;
+      const sortedRules = [...settings.colorRules].sort((a,b) => b.count - a.count);
+      
+      container.innerHTML = sortedRules.map(rule => `
+        <div class="flex items-center gap-3 p-3 rounded-lg border bg-gray-50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
+          <input type="number" min="1" value="${rule.count}" 
+            onchange="updateColorRule('${rule.id}', 'count', this.value)"
+            class="w-16 px-2 py-1.5 rounded border focus:ring-1 focus:ring-indigo-500 text-center bg-white border-gray-300 dark:bg-gray-900 dark:border-gray-600 dark:text-white">
+          <span class="text-gray-600 dark:text-gray-400">回以上で</span>
+          <input type="color" value="${rule.color}" 
+            onchange="updateColorRule('${rule.id}', 'color', this.value)"
+            class="w-10 h-8 rounded border border-gray-300 dark:border-gray-600 cursor-pointer p-0 bg-transparent">
+          <button onclick="deleteColorRule('${rule.id}')" class="text-gray-400 hover:text-red-500 p-1">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleSetting(key) {
+      settings[key] = !settings[key];
+      saveSettings();
+    }
+
+    function addColorRule() {
+      if (settings.colorRules.length >= 6) {
+        showToast('色のルールは最大6つまでです');
+        return;
+      }
+      settings.colorRules.push({ id: generateId(), count: 1, color: '#3b82f6' });
+      saveSettings();
+    }
+
+    function updateColorRule(id, key, value) {
+      const rule = settings.colorRules.find(r => r.id === id);
+      if (rule) {
+        rule[key] = key === 'count' ? Number(value) : value;
+        saveSettings();
+      }
+    }
+
+    function deleteColorRule(id) {
+      settings.colorRules = settings.colorRules.filter(r => r.id !== id);
+      saveSettings();
+    }
+
+    function setTheme(theme) {
+      settings.theme = theme;
+      saveSettings();
+    }
+
+    function setFontSize(size) {
+      settings.fontSize = size;
+      saveSettings();
+    }
+
+    // --- Batch Modal Actions ---
+    function openBatchMoveModal() {
+      if (selectedFolderIds.size === 0 && selectedMemoIds.size === 0) {
+        showToast("移動する項目を選択してください");
+        return;
+      }
+
+      const container = document.getElementById('folderTreeContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const buildTree = (parentId, depth = 0) => {
+        const children = appState.folders.filter(f => f.parentId === parentId && !selectedFolderIds.has(f.id));
+        children.forEach(folder => {
+          const btn = document.createElement('button');
+          btn.className = `w-full text-left py-2 px-3 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-2 text-sm ${selectedBatchTargetFolderId === folder.id ? 'bg-indigo-100 dark:bg-indigo-900/60 font-bold text-indigo-600 dark:text-indigo-300' : ''}`;
+          btn.style.paddingLeft = `${(depth + 1) * 16}px`;
+          btn.innerHTML = `<i data-lucide="folder" class="w-4 h-4 text-indigo-500"></i> ${escapeHTML(folder.name)}`;
+          btn.onclick = () => {
+            selectedBatchTargetFolderId = folder.id;
+            openBatchMoveModal();
+          };
+          container.appendChild(btn);
+          buildTree(folder.id, depth + 1);
+        });
+      };
+
+      buildTree(null, 0);
+      openModal('batchMoveModal');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function executeBatchMove() {
+      if (!selectedBatchTargetFolderId) {
+        showToast("移動先のフォルダを選択してください");
+        return;
+      }
+
+      const newState = {
+        folders: appState.folders.map(f => selectedFolderIds.has(f.id) ? { ...f, parentId: selectedBatchTargetFolderId } : f),
+        memos: appState.memos.map(m => selectedMemoIds.has(m.id) ? { ...m, folderId: selectedBatchTargetFolderId } : m)
+      };
+
+      updateState(newState);
+      selectedBatchTargetFolderId = null;
+      closeModal('batchMoveModal');
+      toggleBatchMode();
+      showToast("選択した項目を移動しました");
     }
 
     function openBatchDeleteModal() {
-      const total = selectedFolderIds.size + selectedMemoIds.size;
-      if (total === 0) {
-        showToast('項目が選択されていません');
+      if (selectedFolderIds.size === 0 && selectedMemoIds.size === 0) {
+        showToast("削除する項目を選択してください");
         return;
       }
-      document.getElementById('batchDeleteMsg').textContent = `選択した ${total} 個の項目（フォルダ/メモ）を本当に削除しますか？`;
+
+      const msg = document.getElementById('batchDeleteMsg');
+      if (msg) {
+        msg.textContent = `選択された ${selectedFolderIds.size} 個のフォルダと ${selectedMemoIds.size} 個のメモを削除します。よろしいですか？`;
+      }
       openModal('batchDeleteConfirmModal');
     }
 
@@ -1090,261 +1390,22 @@
         folders: appState.folders.filter(f => !selectedFolderIds.has(f.id)),
         memos: appState.memos.filter(m => !selectedMemoIds.has(m.id))
       };
+
       updateState(newState);
-      selectedFolderIds.clear();
-      selectedMemoIds.clear();
       closeModal('batchDeleteConfirmModal');
-      showToast('選択した項目を削除しました');
+      toggleBatchMode();
+      showToast("選択した項目を削除しました");
     }
 
-    function openBatchMoveModal() {
-      const total = selectedFolderIds.size + selectedMemoIds.size;
-      if (total === 0) {
-        showToast('項目が選択されていません');
-        return;
-      }
-      renderFolderTree();
-      openModal('batchMoveModal');
-    }
-
-    function renderFolderTree() {
-      const container = document.getElementById('folderTreeContainer');
-      container.innerHTML = '';
-      selectedTargetFolderForBatchMove = 'root';
-
-      function buildTreeHTML(parentId, level = 0) {
-        const children = appState.folders.filter(f => f.parentId === parentId);
-        let html = '';
-        children.forEach(folder => {
-          if (selectedFolderIds.has(folder.id)) return;
-
-          const isSelected = selectedTargetFolderForBatchMove === folder.id;
-          const padding = level * 16 + 12;
-
-          html += `
-            <div onclick="selectBatchMoveTarget('${folder.id}')" id="tree-node-${folder.id}" class="folder-tree-node flex items-center gap-2 p-2.5 rounded-xl cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors border ${isSelected ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 font-bold' : 'border-transparent text-gray-700 dark:text-gray-200'}" style="padding-left: ${padding}px;">
-              <i data-lucide="folder" class="w-4 h-4 text-indigo-500 shrink-0"></i>
-              <span class="text-sm truncate">${escapeHTML(folder.name)}</span>
-            </div>
-          `;
-          html += buildTreeHTML(folder.id, level + 1);
-        });
-        return html;
-      }
-
-      container.innerHTML = buildTreeHTML(null, 0);
-      lucide.createIcons();
-    }
-
-    function selectBatchMoveTarget(id) {
-      selectedTargetFolderForBatchMove = id;
-      document.querySelectorAll('.folder-tree-node').forEach(node => {
-        node.classList.remove('border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-900/40', 'text-indigo-600', 'font-bold');
-        node.classList.add('border-transparent');
-      });
-      const selectedNode = document.getElementById(`tree-node-${id}`);
-      if (selectedNode) {
-        selectedNode.classList.add('border-indigo-600', 'bg-indigo-50', 'dark:bg-indigo-900/40', 'text-indigo-600', 'font-bold');
-        selectedNode.classList.remove('border-transparent');
-      }
-    }
-
-    function executeBatchMove() {
-      if (!selectedTargetFolderForBatchMove) return;
-
-      const newState = {
-        folders: appState.folders.map(f => {
-          if (selectedFolderIds.has(f.id)) return { ...f, parentId: selectedTargetFolderForBatchMove };
-          return f;
-        }),
-        memos: appState.memos.map(m => {
-          if (selectedMemoIds.has(m.id)) return { ...m, folderId: selectedTargetFolderForBatchMove };
-          return m;
-        })
-      };
-
-      updateState(newState);
-      selectedFolderIds.clear();
-      selectedMemoIds.clear();
-      closeModal('batchMoveModal');
-      showToast('選択した項目を移動しました');
-    }
-
-    // --- Rich Text Editor & CRUD Operations ---
-    function formatText(cmd, value = null) {
-      document.execCommand(cmd, false, value);
-    }
-
-    function copyToClipboard(text) {
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "absolute";
-      textArea.style.left = "-999999px";
-      document.body.prepend(textArea);
-      textArea.select();
-      try {
-        document.execCommand('copy');
-        showToast('メモをコピーしました');
-      } catch (error) {
-        showToast('コピーに失敗しました');
-      } finally {
-        textArea.remove();
-      }
-    }
-
-    function changeFolder(id) {
-      currentFolderId = id;
-      renderAll();
-    }
-
-    function saveMemo() {
-      const editor = document.getElementById('memoInput');
-      const htmlContent = editor.innerHTML.trim();
-      const textContent = editor.innerText.trim();
-
-      if (!textContent && !htmlContent && !currentImageAttachment) {
-        showToast('内容が入力されていません');
-        return;
-      }
-
-      if (editingMemoId) {
-        const newState = {
-          ...appState,
-          memos: appState.memos.map(m => {
-            if (m.id === editingMemoId) {
-              return {
-                ...m,
-                html: htmlContent,
-                text: textContent,
-                imageUrl: currentImageAttachment
-              };
-            }
-            return m;
-          })
-        };
-        updateState(newState);
-        showToast('メモを更新しました');
-      } else {
-        const duplicateIndex = appState.memos.findIndex(m => 
-          m.folderId === currentFolderId && (m.text === textContent || (m.html && m.html === htmlContent))
-        );
-
-        if (duplicateIndex !== -1) {
-          const newState = { ...appState, memos: [...appState.memos] };
-          newState.memos[duplicateIndex].count += 1;
-          if (currentImageAttachment) {
-            newState.memos[duplicateIndex].imageUrl = currentImageAttachment;
-          }
-          updateState(newState);
-          showToast('間違えた回数をカウントアップしました！');
-        } else {
-          const newMemo = {
-            id: generateId(),
-            folderId: currentFolderId,
-            html: htmlContent,
-            text: textContent,
-            count: 1,
-            imageUrl: currentImageAttachment
-          };
-          updateState({ ...appState, memos: [...appState.memos, newMemo] });
-          showToast('新しいメモを追加しました');
-        }
-      }
-
-      closeModal('memoModal');
-      editingMemoId = null;
-      currentImageAttachment = null;
-    }
-
-    function saveFolder() {
-      const input = document.getElementById('folderInput');
-      const name = input.value.trim();
-
-      if (!name) {
-        showToast('フォルダ名を入力してください');
-        return;
-      }
-
-      if (editingFolderId) {
-        const newState = {
-          ...appState,
-          folders: appState.folders.map(f => f.id === editingFolderId ? { ...f, name } : f)
-        };
-        updateState(newState);
-        showToast('フォルダ名を変更しました');
-      } else {
-        const newFolder = {
-          id: generateId(),
-          name,
-          parentId: currentFolderId
-        };
-        updateState({ ...appState, folders: [...appState.folders, newFolder] });
-        showToast('新規フォルダを作成しました');
-      }
-
-      closeModal('folderModal');
-      editingFolderId = null;
-    }
-
-    function openEditContextModal() {
+    function requestDelete() {
       if (!contextMenuData) return;
       const { type, id } = contextMenuData;
       hideContextMenu();
 
       if (type === 'folder') {
-        const folder = appState.folders.find(f => f.id === id);
-        if (folder) {
-          editingFolderId = id;
-          document.getElementById('folderModalTitle').textContent = 'フォルダ名を編集';
-          document.getElementById('folderInput').value = folder.name;
-          openModal('folderModal');
-        }
-      } else if (type === 'memo') {
-        const memo = appState.memos.find(m => m.id === id);
-        if (memo) {
-          editingMemoId = id;
-          document.getElementById('memoModalTitle').textContent = 'メモを編集';
-          document.getElementById('memoInput').innerHTML = memo.html || memo.text;
-          
-          if (memo.imageUrl) {
-            currentImageAttachment = memo.imageUrl;
-            document.getElementById('attachedImg').src = memo.imageUrl;
-            document.getElementById('attachedImagePreview').classList.remove('hidden-force');
-          } else {
-            removeAttachedImage();
-          }
-          openModal('memoModal');
-        }
-      }
-    }
-
-    function requestDelete() {
-      if (!contextMenuData) return;
-      openModal('deleteConfirmModal');
-    }
-
-    function executeSingleDelete() {
-      if (!contextMenuData) return;
-      const { type, id } = contextMenuData;
-
-      if (type === 'folder') {
-        const idsToDelete = new Set([id]);
-        
-        function collectSubFolderIds(parentId) {
-          appState.folders.filter(f => f.parentId === parentId).forEach(child => {
-            idsToDelete.add(child.id);
-            collectSubFolderIds(child.id);
-          });
-        }
-        collectSubFolderIds(id);
-
-        const newState = {
-          folders: appState.folders.filter(f => !idsToDelete.has(f.id)),
-          memos: appState.memos.filter(m => !idsToDelete.has(m.folderId))
-        };
-        updateState(newState);
-        showToast('フォルダを削除しました');
-      } else if (type === 'memo') {
+        folderToDelete = id;
+        openModal('deleteConfirmModal');
+      } else {
         const newState = {
           ...appState,
           memos: appState.memos.filter(m => m.id !== id)
@@ -1352,320 +1413,149 @@
         updateState(newState);
         showToast('メモを削除しました');
       }
-
-      closeModal('deleteConfirmModal');
-      hideContextMenu();
     }
 
-    function getMovableFolders(targetId) {
-      const invalidIds = new Set([targetId]);
-      function collectChildren(id) {
-        appState.folders.filter(f => f.parentId === id).forEach(child => {
-          invalidIds.add(child.id);
-          collectChildren(child.id);
-        });
-      }
-      collectChildren(targetId);
-
-      return appState.folders.filter(f => !invalidIds.has(f.id));
+    function executeSingleDelete() {
+      if (!folderToDelete) return;
+      const newState = {
+        ...appState,
+        folders: appState.folders.filter(f => f.id !== folderToDelete)
+      };
+      updateState(newState);
+      folderToDelete = null;
+      closeModal('deleteConfirmModal');
+      showToast('フォルダを削除しました');
     }
 
     function executeFolderMove() {
       if (!folderToMove) return;
-      const select = document.getElementById('moveTargetSelect');
-      const targetParentId = select.value;
-
+      const targetId = document.getElementById('moveTargetSelect').value;
       const newState = {
         ...appState,
-        folders: appState.folders.map(f => f.id === folderToMove ? { ...f, parentId: targetParentId } : f)
+        folders: appState.folders.map(f => f.id === folderToMove ? { ...f, parentId: targetId } : f)
       };
-
       updateState(newState);
-      closeModal('moveModal');
       folderToMove = null;
+      closeModal('moveModal');
       showToast('フォルダを移動しました');
     }
 
-    // --- Media & Drawing attachments ---
+    // --- Drawing Canvas Helpers ---
+    function setupCanvas() {
+      canvas = document.getElementById('paintCanvas');
+      if (!canvas) return;
+      ctx = canvas.getContext('2d');
+
+      const startDrawing = (e) => {
+        isDrawing = true;
+        const pos = getCanvasPos(e);
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      };
+
+      const draw = (e) => {
+        if (!isDrawing) return;
+        const pos = getCanvasPos(e);
+        ctx.strokeStyle = currentPenColor;
+        ctx.lineWidth = document.getElementById('penSize').value;
+        ctx.lineCap = 'round';
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+      };
+
+      const stopDrawing = () => { isDrawing = false; };
+
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+
+      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+      canvas.addEventListener('touchend', stopDrawing);
+    }
+
+    function getCanvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
+
+    function setPenColor(color) { currentPenColor = color; }
+
+    function clearCanvas() {
+      if (ctx && canvas) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function openCanvasModal() {
+      clearCanvas();
+      openModal('drawModal');
+    }
+
+    function applyCanvasDrawing() {
+      attachedImageData = canvas.toDataURL('image/png');
+      document.getElementById('attachedImg').src = attachedImageData;
+      document.getElementById('attachedImagePreview').classList.remove('hidden-force');
+      closeModal('drawModal');
+    }
+
+    function removeAttachedImage() {
+      attachedImageData = null;
+      document.getElementById('attachedImagePreview').classList.add('hidden-force');
+    }
+
+    // Image file chooser event
     document.getElementById('imageAttachmentInput').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = (event) => {
-        currentImageAttachment = event.target.result;
-        document.getElementById('attachedImg').src = currentImageAttachment;
+        attachedImageData = event.target.result;
+        document.getElementById('attachedImg').src = attachedImageData;
         document.getElementById('attachedImagePreview').classList.remove('hidden-force');
       };
       reader.readAsDataURL(file);
       e.target.value = '';
     });
 
-    function removeAttachedImage() {
-      currentImageAttachment = null;
-      document.getElementById('attachedImg').src = '';
-      document.getElementById('attachedImagePreview').classList.add('hidden-force');
-    }
-
-    function openCanvasModal() {
-      openModal('drawModal');
-      clearCanvas();
-    }
-
-    function setupCanvas() {
-      const canvas = document.getElementById('paintCanvas');
-      canvasCtx = canvas.getContext('2d');
-
-      const getCoords = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return {
-          x: (clientX - rect.left) * (canvas.width / rect.width),
-          y: (clientY - rect.top) * (canvas.height / rect.height)
-        };
-      };
-
-      const startDrawing = (e) => {
-        isDrawing = true;
-        const pos = getCoords(e);
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(pos.x, pos.y);
-      };
-
-      const draw = (e) => {
-        if (!isDrawing) return;
-        const pos = getCoords(e);
-        const size = document.getElementById('penSize').value;
-        canvasCtx.lineTo(pos.x, pos.y);
-        canvasCtx.strokeStyle = penColor;
-        canvasCtx.lineWidth = size;
-        canvasCtx.lineCap = 'round';
-        canvasCtx.lineJoin = 'round';
-        canvasCtx.stroke();
-      };
-
-      const stopDrawing = () => {
-        isDrawing = false;
-      };
-
-      canvas.addEventListener('mousedown', startDrawing);
-      canvas.addEventListener('mousemove', draw);
-      canvas.addEventListener('mouseup', stopDrawing);
-      canvas.addEventListener('mouseleave', stopDrawing);
-
-      canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e); });
-      canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
-      canvas.addEventListener('touchend', stopDrawing);
-    }
-
-    function setPenColor(color) {
-      penColor = color;
-    }
-
-    function clearCanvas() {
-      const canvas = document.getElementById('paintCanvas');
-      if (canvasCtx) {
-        canvasCtx.fillStyle = '#ffffff';
-        canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-
-    function applyCanvasDrawing() {
-      const canvas = document.getElementById('paintCanvas');
-      currentImageAttachment = canvas.toDataURL('image/png');
-      document.getElementById('attachedImg').src = currentImageAttachment;
-      document.getElementById('attachedImagePreview').classList.remove('hidden-force');
-      closeModal('drawModal');
-    }
-
-    // --- Settings UI Helper ---
-    function renderSettingsModal() {
-      const isDark = settings.theme === 'dark';
-      document.getElementById('theme-light-btn').className = `flex-1 py-2 rounded-lg border font-medium ${!isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
-      document.getElementById('theme-dark-btn').className = `flex-1 py-2 rounded-lg border font-medium ${isDark ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
-
-      ['small', 'medium', 'large'].forEach(size => {
-        const btn = document.getElementById(`font-${size}-btn`);
-        const active = settings.fontSize === size;
-        btn.className = `flex-1 py-2 rounded-lg border font-medium ${active ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-500/50 dark:text-indigo-300' : 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}`;
-      });
-
-      document.getElementById('enterToSubmitToggle').checked = settings.enterToSubmit;
-      document.getElementById('batchIncludeFoldersToggle').checked = settings.batchIncludeFolders;
-      document.getElementById('enableMediaAttachmentsToggle').checked = settings.enableMediaAttachments;
-
-      const addBtn = document.getElementById('addColorRuleBtn');
-      addBtn.disabled = settings.colorRules.length >= 5;
-
-      const container = document.getElementById('colorRulesContainer');
-      const sortedRules = [...settings.colorRules].sort((a,b) => b.count - a.count);
-      
-      container.innerHTML = sortedRules.map(rule => `
-        <div class="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700">
-          <span class="text-xs text-gray-500 shrink-0">間違い回数:</span>
-          <input type="number" min="1" value="${rule.count}" onchange="updateColorRule('${rule.id}', 'count', this.value)" class="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-center font-bold">
-          <span class="text-xs text-gray-500 shrink-0">以上で</span>
-          <select onchange="updateColorRule('${rule.id}', 'color', this.value)" class="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800">
-            ${COLOR_OPTIONS.map(opt => `<option value="${opt.value}" ${opt.value === rule.color ? 'selected' : ''}>${opt.label}</option>`).join('')}
-          </select>
-          <button onclick="deleteColorRule('${rule.id}')" class="p-1 text-red-500 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-        </div>
-      `).join('');
-    }
-
-    function addColorRule() {
-      if (settings.colorRules.length >= 5) return;
-      const newRule = { id: generateId(), count: 1, color: 'blue' };
-      settings.colorRules.push(newRule);
-      saveSettings();
-    }
-
-    function updateColorRule(id, key, val) {
-      settings.colorRules = settings.colorRules.map(r => {
-        if (r.id === id) {
-          return { ...r, [key]: key === 'count' ? Math.max(1, parseInt(val) || 1) : val };
-        }
-        return r;
-      });
-      saveSettings();
-    }
-
-    function deleteColorRule(id) {
-      settings.colorRules = settings.colorRules.filter(r => r.id !== id);
-      saveSettings();
-    }
-
-    // --- File IO & Direct Code Load ---
-    function switchLoadOption(opt) {
-      const fileBtn = document.getElementById('loadOptFileBtn');
-      const codeBtn = document.getElementById('loadOptCodeBtn');
-      const fileView = document.getElementById('loadOptionFileView');
-      const codeView = document.getElementById('loadOptionCodeView');
-
-      if (opt === 'file') {
-        fileBtn.className = "p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all";
-        codeBtn.className = "p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all";
-        fileView.classList.remove('hidden-force');
-        codeView.classList.add('hidden-force');
-      } else {
-        codeBtn.className = "p-4 rounded-xl border border-indigo-500 bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex flex-col items-center gap-2 transition-all";
-        fileBtn.className = "p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-600 dark:text-gray-400 font-bold flex flex-col items-center gap-2 transition-all";
-        codeView.classList.remove('hidden-force');
-        fileView.classList.add('hidden-force');
-        setTimeout(() => document.getElementById('directCodeInput').focus(), 100);
-      }
-    }
-
-    function executeLoadFromCode() {
-      const rawCode = document.getElementById('directCodeInput').value.trim();
-      if (!rawCode) {
-        showToast('コードが入力されていません');
-        return;
-      }
-
-      try {
-        const parsed = JSON.parse(rawCode);
-        if (parsed && parsed.folders && parsed.memos) {
-          updateState(parsed);
-          currentFolderId = 'root';
-          renderAll();
-          document.getElementById('directCodeInput').value = '';
-          closeModal('loadModal');
-          showToast("コードからデータを読み込みました");
-        } else {
-          showToast("無効なセーブデータフォーマットです");
-        }
-      } catch (err) {
-        showToast("JSONコードの解析に失敗しました");
-      }
-    }
-
-    async function executeSaveToFile() {
-      const nameInput = document.getElementById('saveFileNameInput').value.trim();
-      const fileName = nameInput ? `${nameInput}.json` : 'mistake_notes.json';
-      const jsonString = JSON.stringify(appState, null, 2);
-      
-      try {
-        if (window.showSaveFilePicker) {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{
-              description: 'JSON Files',
-              accept: { 'application/json': ['.json'] },
-            }],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(jsonString);
-          await writable.close();
-          showToast("指定された場所に保存しました");
-        } else {
-          const blob = new Blob([jsonString], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-          showToast("ダウンロードフォルダに保存しました");
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') showToast("保存に失敗しました");
-      }
-      closeModal('saveModal');
-    }
-
-    document.getElementById('fileInput').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const parsed = JSON.parse(event.target.result);
-          if (parsed.folders && parsed.memos) {
-            updateState(parsed);
-            currentFolderId = 'root';
-            renderAll();
-            closeModal('loadModal');
-            showToast("ファイルからデータを読み込みました");
-          }
-        } catch(err) {
-          showToast("読み込みに失敗しました");
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = '';
-    });
-
-    // --- UI Helpers & Events ---
+    // --- Modal Management & Toasts ---
     function openModal(id) {
-      if (id === 'memoModal' && !editingMemoId) {
-        document.getElementById('memoModalTitle').textContent = '記録を追加';
-        document.getElementById('memoInput').innerHTML = '';
-        removeAttachedImage();
-      } else if (id === 'folderModal' && !editingFolderId) {
-        document.getElementById('folderModalTitle').textContent = '新規フォルダ';
-        document.getElementById('folderInput').value = '';
-      }
-
       const el = document.getElementById(id);
+      if (!el) return;
       el.classList.remove('hidden-force');
       el.classList.add('flex');
-      const input = el.querySelector('input, [contenteditable="true"]');
+      
+      if (id === 'memoModal') {
+        editingMemoId = null;
+        document.getElementById('memoModalTitle').textContent = '記録を追加';
+        document.getElementById('memoInput').innerHTML = '';
+        attachedImageData = null;
+        document.getElementById('attachedImagePreview').classList.add('hidden-force');
+      } else if (id === 'folderModal') {
+        if (!editingFolderId) {
+          document.getElementById('folderModalTitle').textContent = '新規フォルダ';
+          document.getElementById('folderInput').value = '';
+        } else {
+          document.getElementById('folderModalTitle').textContent = 'フォルダ名を編集';
+        }
+      }
+
+      const input = el.querySelector('input[type="text"], textarea, [contenteditable="true"]');
       if(input) setTimeout(() => input.focus(), 100);
     }
 
     function closeModal(id) {
       const el = document.getElementById(id);
+      if (!el) return;
       el.classList.add('hidden-force');
       el.classList.remove('flex');
-
-      if (id === 'memoModal') editingMemoId = null;
       if (id === 'folderModal') editingFolderId = null;
     }
 
     function showToast(msg) {
       const container = document.getElementById('toastContainer');
+      if (!container) return;
       const toast = document.createElement('div');
       toast.className = "bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl text-sm font-medium animate-fade-in-up border border-gray-700";
       toast.textContent = msg;
@@ -1677,76 +1567,167 @@
       }, 3000);
     }
 
-    function showContextMenu() {
-      if (!contextMenuData) return;
-      const menu = document.getElementById('contextMenu');
-      const moveBtn = document.getElementById('contextMoveBtn');
-      
-      if (contextMenuData.type === 'folder') {
-        moveBtn.classList.remove('hidden-force');
-      } else {
-        moveBtn.classList.add('hidden-force');
+    function copyToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "absolute";
+      textArea.style.left = "-999999px";
+      document.body.prepend(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('クリップボードにコピーしました');
+      } catch (error) {
+        showToast('コピーに失敗しました');
+      } finally {
+        textArea.remove();
+      }
+    }
+
+    // --- Undo / Redo ---
+    function undo() {
+      if (pastHistory.length === 0) return;
+      const previous = pastHistory.pop();
+      futureHistory.push(JSON.parse(JSON.stringify(appState)));
+      appState = previous;
+      saveToStorage();
+      renderAll();
+    }
+
+    function redo() {
+      if (futureHistory.length === 0) return;
+      const next = futureHistory.pop();
+      pastHistory.push(JSON.parse(JSON.stringify(appState)));
+      appState = next;
+      saveToStorage();
+      renderAll();
+    }
+
+    // --- Event Listener Assignments ---
+    function setupEventListeners() {
+      const deleteBtn = document.getElementById('contextDeleteBtn');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          requestDelete();
+        });
       }
 
-      menu.classList.remove('hidden-force');
-      menu.classList.add('flex');
-      
-      let left = contextMenuData.x + 10;
-      let top = Math.max(contextMenuData.y - 50, 10);
-      
-      if (left + 140 > window.innerWidth) left = window.innerWidth - 150;
-      
-      menu.style.left = `${left}px`;
-      menu.style.top = `${top}px`;
-    }
+      const moveBtn = document.getElementById('contextMoveBtn');
+      if (moveBtn) {
+        moveBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!contextMenuData || contextMenuData.type !== 'folder') return;
+          folderToMove = contextMenuData.id;
+          hideContextMenu();
 
-    function hideContextMenu() {
-      const menu = document.getElementById('contextMenu');
-      menu.classList.add('hidden-force');
-      setTimeout(() => { contextMenuData = null; }, 50);
-    }
+          const select = document.getElementById('moveTargetSelect');
+          select.innerHTML = '';
+          const movableFolders = appState.folders.filter(f => f.id !== folderToMove);
+          movableFolders.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f.id;
+            option.textContent = f.name;
+            select.appendChild(option);
+          });
+          openModal('moveModal');
+        });
+      }
 
-    function setupEventListeners() {
+      const addCountBtn = document.getElementById('contextAddCountBtn');
+      if (addCountBtn) {
+        addCountBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          incrementMemoCount(1);
+        });
+      }
+
+      const addCustomCountBtn = document.getElementById('contextAddCustomCountBtn');
+      if (addCustomCountBtn) {
+        addCustomCountBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          promptCustomIncrement();
+        });
+      }
+
+      const editBtn = document.getElementById('contextEditBtn');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!contextMenuData) return;
+          const { type, id } = contextMenuData;
+          hideContextMenu();
+
+          if (type === 'folder') {
+            editingFolderId = id;
+            const folder = appState.folders.find(f => f.id === id);
+            if (folder) {
+              document.getElementById('folderInput').value = folder.name;
+              openModal('folderModal');
+            }
+          } else {
+            editingMemoId = id;
+            const memo = appState.memos.find(m => m.id === id);
+            if (memo) {
+              document.getElementById('memoModalTitle').textContent = '記録を編集';
+              document.getElementById('memoInput').innerHTML = memo.html || escapeHTML(memo.text);
+              if (memo.imageUrl) {
+                attachedImageData = memo.imageUrl;
+                document.getElementById('attachedImg').src = memo.imageUrl;
+                document.getElementById('attachedImagePreview').classList.remove('hidden-force');
+              }
+              openModal('memoModal');
+            }
+          }
+        });
+      }
+
       document.addEventListener('pointerdown', (e) => {
         if (!e.target.closest('#contextMenu') && contextMenuData) {
           hideContextMenu();
         }
       });
 
-      document.getElementById('contextEditBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        openEditContextModal();
-      });
-
-      document.getElementById('contextDeleteBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        requestDelete();
-      });
-
-      document.getElementById('contextMoveBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (!contextMenuData || contextMenuData.type !== 'folder') return;
-        folderToMove = contextMenuData.id;
-        hideContextMenu();
-        
-        const select = document.getElementById('moveTargetSelect');
-        select.innerHTML = '';
-        const movableFolders = getMovableFolders(folderToMove);
-        movableFolders.forEach(f => {
-          const option = document.createElement('option');
-          option.value = f.id;
-          option.textContent = f.name;
-          select.appendChild(option);
+      // File input listener
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              if (parsed.folders && parsed.memos) {
+                appState = { folders: parsed.folders, memos: parsed.memos };
+                if (parsed.settings) settings = { ...defaultSettings, ...parsed.settings };
+                saveToStorage();
+                currentFolderId = 'root';
+                renderAll();
+                showToast("データを読み込みました");
+                closeModal('loadModal');
+              }
+            } catch(err) {
+              showToast("読み込みに失敗しました");
+            }
+          };
+          reader.readAsText(file);
+          e.target.value = '';
         });
-        
-        openModal('moveModal');
-      });
+      }
 
       // Keyboard Shortcuts & Enter-to-Submit
       window.addEventListener('keydown', (e) => {
-        if ((e.key === '¥' || e.key === '\\') && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
-          e.preventDefault();
-          openModal('memoModal');
+        const isYenKey = (e.key === '¥' || e.key === '\\');
+
+        if (isYenKey && settings.blockYenSymbol !== false) {
+          const isModalOpen = !document.getElementById('memoModal').classList.contains('hidden-force');
+          if (!isModalOpen) {
+            e.preventDefault();
+            openModal('memoModal');
+          } else {
+            e.preventDefault();
+          }
         }
 
         if (e.key === 'Enter' && settings.enterToSubmit && !e.shiftKey) {
